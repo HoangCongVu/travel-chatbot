@@ -3,7 +3,7 @@ docker ps
 docker exec -it 47f91c5c760f bash
 psql -U clinic-website-chatbot -d clinic-website-chatbot
 
-lenh xoa table:
+##lenh xoa table:
 
 DO
 
