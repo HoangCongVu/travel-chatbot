@@ -16,3 +16,20 @@ class UserTable(Base):
     created_at = Mapped[datetime] = mapped_column(DateTime,
         default=func.now(), nullable=False
     )
+
+class UserCreateModel(Base):
+    full_name: str
+    phone_number: str
+    email: Optional[str] = None
+    password: str
+
+class UserModel(Base):
+    id: uuid.UUID
+    full_name: str
+    phone_number: str
+    email: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
