@@ -4,6 +4,7 @@ import alembic.config
 
 from env import env
 from app_environment import AppEnvironment
+from controllers import appointments
 
 
 def create_app() -> FastAPI:
@@ -29,6 +30,7 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+    app.include_router(appointments.router,prefix="/appointments")
 
     return app
 
