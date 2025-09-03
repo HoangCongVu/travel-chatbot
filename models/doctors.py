@@ -16,7 +16,7 @@ class DoctorTable(Base):
     fullname: Mapped[str] = mapped_column(String(255), nullable=False)
     phone_number: Mapped[str] = mapped_column(String(20), nullable=False, unique=True)
     department_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("departments.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("department.id"), nullable=False
     )
     specialization: Mapped[str] = mapped_column(String(255), nullable=False)
     biography: Mapped[str | None] = mapped_column(Text, nullable=True)
