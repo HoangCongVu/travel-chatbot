@@ -4,10 +4,8 @@ import alembic.config
 
 from env import env
 from app_environment import AppEnvironment
-from controllers import (user, 
-chat,
-appointments, 
-doctors)
+from controllers import (tour_type,
+visa_price)
 
 def create_app() -> FastAPI:
     app = FastAPI(debug=env.DEBUG)
@@ -32,11 +30,8 @@ def create_app() -> FastAPI:
             allow_methods=["*"],
             allow_headers=["*"],
         )
-    app.include_router(user.router, prefix="/users")
-    app.include_router(chat.router, prefix="/chats")
-    app.include_router(doctors.router, prefix="/doctors")
-    app.include_router(appointments.router, prefix="/appointments")
-
+    app.include_router(tour_type.router, prefix="/api")
+    app.include_router(visa_price.router, prefix="/api")
     return app
 
 
