@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     APP_ENV: str = "local"  # local | dev | prod
     DEBUG: bool = True
-
     DB_NAME: str
     DB_USER: str
     DB_PASSWORD: str

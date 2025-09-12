@@ -7,31 +7,29 @@ from sqlalchemy.orm import Mapped, mapped_column
 from db import Base
 from pydantic import BaseModel, ConfigDict
 
-class TourTypeTable(Base):
-    __tablename__ = "tour_types"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    type_name: Mapped[str] = mapped_column(String(100), nullable=False)
+class UserTable(Base):
+    __tablename__ = "users"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
-
-class CreateTourType(BaseModel):
-    id: int
-    type_name: str
     model_config = ConfigDict(from_attributes=True)
 
-class UpdateTourType(BaseModel):
-    id: int | None = None
-    type_name: str | None = None
+class UserModel(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    phone_number: str
+    email: str
     model_config = ConfigDict(from_attributes=True)
-
-class TourTypeModel(BaseModel):
-    id: int
-    type_name: str
-    created_at: datetime
-    updated_at: datetime
+    
+class UserCreateModel(BaseModel):
+    full_name: str
+    phone_number: str
+    email: str
     model_config = ConfigDict(from_attributes=True)
