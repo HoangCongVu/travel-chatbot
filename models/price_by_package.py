@@ -1,17 +1,19 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, func, TIMESTAMP
+from typing import Optional
+from sqlalchemy import String, Text, func, ForeignKey, TIMESTAMP, DECIMAL, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
-from pydantic import BaseModel, Field, ConfigDict
+from sqlalchemy.orm import Mapped, mapped_column
 from db import Base
+from pydantic import BaseModel, ConfigDict
 
-class DepartureSchedule(Base):
-    __tablename__ = "departure_schedules"
 
+class PriceByPackage(Base):
+    __tablename__ = "price_by_packages"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tour_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tours.id"), nullable=False)
-    schedule_type: Mapped[str] = mapped_column(String(50), nullable=False) 
+    package_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    price: Mapped[float] = mapped_column(DECIMAL(10, 2))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -19,23 +21,23 @@ class DepartureSchedule(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-
-
-class CreateDepartureSchedulePayload(BaseModel):
+class CreatePriceByPackagePayload(BaseModel):
     tour_id: uuid.UUID
-    schedule_type: str
+    package_name: str
+    price: float
 
 
-class UpdateDepartureSchedulePayload(BaseModel):
+class UpdatePriceByPackagePayload(BaseModel):
     tour_id: uuid.UUID | None = None
-    schedule_type: str | None = None
-    model_config = ConfigDict(from_attributes=True)
+    package_name: str | None = None
+    price: float | None = None
 
 
-class DepartureScheduleModel(BaseModel):
-    id: uuid.UUID
+class PriceByPackageModel(BaseModel):
+    id: uuid.UUID 
     tour_id: uuid.UUID
-    schedule_type: str
+    package_name: str
+    price: float
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

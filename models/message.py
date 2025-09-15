@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime
-from sqlalchemy import Text, TIMESTAMP, ForeignKey, func
+from sqlalchemy import Text, DateTime, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID as pgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 from pydantic import BaseModel, ConfigDict
@@ -16,8 +16,12 @@ class Message(Base):
     chat_id: Mapped[uuid.UUID] = mapped_column(pgUUID(as_uuid=True), ForeignKey(Chat.id), nullable=False)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
     role: Mapped[str] = mapped_column(sa.Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 # Payload khi tạo tin nhắn mới
 class CreateMessagePayload(BaseModel):

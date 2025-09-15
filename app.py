@@ -7,8 +7,16 @@ from controllers import (chatbot,
 user,
 chat,
 tour_type,
+tour,
 visa_price,
+price_by_date,
+price_by_package,
+tour_highlight_location,
+tour_destination,
+tour_departure,
 departure_schedule,
+recurring_schedule,
+specific_departure
 )
 
 def create_app() -> FastAPI:
@@ -46,8 +54,16 @@ def create_app() -> FastAPI:
     app.include_router(user.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
     app.include_router(tour_type.router, prefix="/api")
+    app.include_router(tour.router, prefix="/api")
     app.include_router(visa_price.router, prefix="/api")
+    app.include_router(price_by_date.router, prefix="/api")
+    app.include_router(price_by_package.router, prefix="/api")
+    app.include_router(tour_highlight_location.router, prefix="/api")
+    app.include_router(tour_destination.router, prefix="/api")
+    app.include_router(tour_departure.router, prefix="/api")
     app.include_router(departure_schedule.router, prefix="/api")
+    app.include_router(recurring_schedule.router, prefix="/api")
+    app.include_router(specific_departure.router, prefix="/api")
     return app
 
 
