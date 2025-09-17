@@ -22,12 +22,12 @@ class SpecificDeparture(Base):
     )
 
 
-class CreateSpecificDeparturePayload(BaseModel):
+class CreateSpecificDeparture(BaseModel):
     schedule_id: uuid.UUID
     date: Optional[date]
 
 
-class UpdateSpecificDeparturePayload(BaseModel):
+class UpdateSpecificDeparture(BaseModel):
     id: uuid.UUID | None = None
     schedule_id: uuid.UUID | None = None
     date: Optional[date] = None

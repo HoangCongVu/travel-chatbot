@@ -1,7 +1,7 @@
 import uuid
 from models.tour_highlight_location import (
-    CreateTourHighlightLocationPayload,
-    UpdateTourHighlightLocationPayload,
+    CreateTourHighlightLocation,
+    UpdateTourHighlightLocation,
     TourHighlightLocationModel
 )
 from repositories.tour_highlight_location import TourHighlightLocationRepository
@@ -9,7 +9,7 @@ from repositories.tour_highlight_location import TourHighlightLocationRepository
 
 class TourHighlightLocationService:
     @staticmethod
-    def create(payload: CreateTourHighlightLocationPayload) -> TourHighlightLocationModel:
+    def create(payload: CreateTourHighlightLocation) -> TourHighlightLocationModel:
         return TourHighlightLocationRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class TourHighlightLocationService:
         return TourHighlightLocationRepository.get_one(location_id)
 
     @staticmethod
-    def update(location_id: uuid.UUID, payload: UpdateTourHighlightLocationPayload) -> TourHighlightLocationModel:
+    def update(location_id: uuid.UUID, payload: UpdateTourHighlightLocation) -> TourHighlightLocationModel:
         return TourHighlightLocationRepository.update(location_id, payload)
 
     @staticmethod

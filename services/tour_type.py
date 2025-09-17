@@ -13,8 +13,12 @@ class TourTypeService:
         return TourTypeRepository.create(payload)
 
     @staticmethod
-    def get(type_id: int) -> TourTypeModel:
+    def get(type_id: int) -> TourTypeModel | None:
         return TourTypeRepository.get_one(type_id)
+    
+    @staticmethod
+    def get_by_name(type_name: str) -> TourTypeModel | None:
+        return TourTypeRepository.get_by_name(type_name)
 
     @staticmethod
     def update(type_id: int, payload: UpdateTourType) -> TourTypeModel:

@@ -1,8 +1,8 @@
 import uuid
 from fastapi import APIRouter
 from models.tour_destination import (
-    CreateTourDestinationPayload,
-    UpdateTourDestinationPayload,
+    CreateTourDestination,
+    UpdateTourDestination,
     TourDestinationModel
 )
 from services.tour_destination import TourDestinationService
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/tour-destinations", tags=["Tour Destinations"])
 
 
 @router.post("", response_model=TourDestinationModel)
-def create_destination(payload: CreateTourDestinationPayload):
+def create_destination(payload: CreateTourDestination):
     return TourDestinationService.create(payload)
 
 
@@ -20,7 +20,7 @@ def get_destination(destination_id: uuid.UUID):
 
 
 @router.put("", response_model=TourDestinationModel)
-def update_destination(destination_id: uuid.UUID, payload: UpdateTourDestinationPayload):
+def update_destination(destination_id: uuid.UUID, payload: UpdateTourDestination):
     return TourDestinationService.update(destination_id, payload)
 
 

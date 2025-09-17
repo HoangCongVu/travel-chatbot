@@ -21,13 +21,13 @@ class PriceByPackage(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-class CreatePriceByPackagePayload(BaseModel):
+class CreatePriceByPackage(BaseModel):
     tour_id: uuid.UUID
     package_name: str
     price: float
 
 
-class UpdatePriceByPackagePayload(BaseModel):
+class UpdatePriceByPackage(BaseModel):
     tour_id: uuid.UUID | None = None
     package_name: str | None = None
     price: float | None = None

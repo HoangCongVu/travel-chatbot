@@ -4,21 +4,21 @@ from repositories.visa_price import VisaPriceRepository
 
 class VisaPriceService():
     @staticmethod
-    def create_visa_price(payload: CreateVisaPrice):
+    def create(payload: CreateVisaPrice):
         return VisaPriceRepository.create(payload)
     
     @staticmethod
-    def get_visa_price(payload: uuid.UUID):
+    def get(payload: uuid.UUID):
         return VisaPriceRepository.get(payload)
     
     @staticmethod
-    def update_visa_price(visa_price_id: uuid.UUID, data: CreateVisaPrice):
-        return VisaPriceRepository.get(visa_price_id)
-    
+    def update(visa_price_id: uuid.UUID, payload: CreateVisaPrice):
+        return VisaPriceRepository.update(visa_price_id, payload)
+
     @staticmethod
-    def delete_visa_price():
-        VisaPriceRepository.delete()
+    def delete(visa_price_id: uuid.UUID):
+        VisaPriceRepository.delete(visa_price_id)
         return "Visa Price deleted successfully"
     @staticmethod
-    def get_all_visa_price():
+    def get_all():
         return VisaPriceRepository.get_all_visa_price()

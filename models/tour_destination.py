@@ -21,13 +21,13 @@ class TourDestination(Base):
     )
 
 
-class CreateTourDestinationPayload(BaseModel):
+class CreateTourDestination(BaseModel):
     tour_id: uuid.UUID
     destination_name: str
     
 
 
-class UpdateTourDestinationPayload(BaseModel):
+class UpdateTourDestination(BaseModel):
     tour_id: uuid.UUID | None = None
     destination_name: str | None = None
     destination_embedding: list[float] | None = None

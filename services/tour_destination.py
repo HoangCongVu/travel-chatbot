@@ -1,7 +1,7 @@
 import uuid
 from models.tour_destination import (
-    CreateTourDestinationPayload,
-    UpdateTourDestinationPayload,
+    CreateTourDestination,
+    UpdateTourDestination,
     TourDestinationModel
 )
 from repositories.tour_destination import TourDestinationRepository
@@ -9,7 +9,7 @@ from repositories.tour_destination import TourDestinationRepository
 
 class TourDestinationService:
     @staticmethod
-    def create(payload: CreateTourDestinationPayload) -> TourDestinationModel:
+    def create(payload: CreateTourDestination) -> TourDestinationModel:
         return TourDestinationRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class TourDestinationService:
         return TourDestinationRepository.get_one(destination_id)
 
     @staticmethod
-    def update(destination_id: uuid.UUID, payload: UpdateTourDestinationPayload) -> TourDestinationModel:
+    def update(destination_id: uuid.UUID, payload: UpdateTourDestination) -> TourDestinationModel:
         return TourDestinationRepository.update(destination_id, payload)
 
     @staticmethod

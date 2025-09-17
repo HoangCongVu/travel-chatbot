@@ -2,14 +2,14 @@ import uuid
 from db import Session
 from models.recurring_schedule import (
     RecurringSchedule,
-    CreateRecurringSchedulePayload,
-    UpdateRecurringSchedulePayload,
+    CreateRecurringSchedule,
+    UpdateRecurringSchedule,
     RecurringScheduleModel
 )
 
 class RecurringScheduleRepository:
     @staticmethod
-    def create(payload: CreateRecurringSchedulePayload) -> RecurringScheduleModel:
+    def create(payload: CreateRecurringSchedule) -> RecurringScheduleModel:
         with Session() as session:
             schedule = RecurringSchedule(**payload.model_dump())
             session.add(schedule)
@@ -26,7 +26,7 @@ class RecurringScheduleRepository:
             return RecurringScheduleModel.model_validate(schedule)
 
     @staticmethod
-    def update(schedule_id: uuid.UUID, data: UpdateRecurringSchedulePayload) -> RecurringScheduleModel:
+    def update(schedule_id: uuid.UUID, data: UpdateRecurringSchedule) -> RecurringScheduleModel:
         with Session() as session:
             schedule = session.get(RecurringSchedule, schedule_id)
             if schedule is None:

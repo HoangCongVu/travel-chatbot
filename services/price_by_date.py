@@ -1,7 +1,7 @@
 import uuid
 from models.price_by_date import (
-    CreatePriceByDatePayload,
-    UpdatePriceByDatePayload,
+    CreatePriceByDate,
+    UpdatePriceByDate,
     PriceByDateModel
 )
 from repositories.price_by_date import PriceByDateRepository
@@ -9,7 +9,7 @@ from repositories.price_by_date import PriceByDateRepository
 
 class PriceByDateService:
     @staticmethod
-    def create(payload: CreatePriceByDatePayload) -> PriceByDateModel:
+    def create(payload: CreatePriceByDate) -> PriceByDateModel:
         return PriceByDateRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class PriceByDateService:
         return PriceByDateRepository.get_one(price_id)
 
     @staticmethod
-    def update(price_id: uuid.UUID, payload: UpdatePriceByDatePayload) -> PriceByDateModel:
+    def update(price_id: uuid.UUID, payload: UpdatePriceByDate) -> PriceByDateModel:
         return PriceByDateRepository.update(price_id, payload)
 
     @staticmethod

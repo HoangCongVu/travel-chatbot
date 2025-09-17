@@ -3,15 +3,15 @@ from db import Session
 from datetime import datetime, timezone
 from models.specific_departure import (
     SpecificDeparture,
-    CreateSpecificDeparturePayload,
-    UpdateSpecificDeparturePayload,
+    CreateSpecificDeparture,
+    UpdateSpecificDeparture,
     SpecificDepartureModel
 )
 
 
 class SpecificDepartureRepository:
     @staticmethod
-    def create(payload: CreateSpecificDeparturePayload) -> SpecificDepartureModel:
+    def create(payload: CreateSpecificDeparture) -> SpecificDepartureModel:
         with Session() as session:
             departure = SpecificDeparture(**payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
             session.add(departure)
@@ -26,7 +26,7 @@ class SpecificDepartureRepository:
             return SpecificDepartureModel.model_validate(departure)
 
     @staticmethod
-    def update(departure_id: uuid.UUID, data: UpdateSpecificDeparturePayload) -> SpecificDepartureModel:
+    def update(departure_id: uuid.UUID, data: UpdateSpecificDeparture) -> SpecificDepartureModel:
         with Session() as session:
             departure = session.get(SpecificDeparture, departure_id)
             for field, value in data.model_dump(exclude_unset=True).items():

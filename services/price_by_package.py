@@ -1,7 +1,7 @@
 import uuid
 from models.price_by_package import (
-    CreatePriceByPackagePayload,
-    UpdatePriceByPackagePayload,
+    CreatePriceByPackage,
+    UpdatePriceByPackage,
     PriceByPackageModel
 )
 from repositories.price_by_package import PriceByPackageRepository
@@ -9,7 +9,7 @@ from repositories.price_by_package import PriceByPackageRepository
 
 class PriceByPackageService:
     @staticmethod
-    def create(payload: CreatePriceByPackagePayload) -> PriceByPackageModel:
+    def create(payload: CreatePriceByPackage) -> PriceByPackageModel:
         return PriceByPackageRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class PriceByPackageService:
         return PriceByPackageRepository.get_one(record_id)
 
     @staticmethod
-    def update(record_id: uuid.UUID, payload: UpdatePriceByPackagePayload) -> PriceByPackageModel:
+    def update(record_id: uuid.UUID, payload: UpdatePriceByPackage) -> PriceByPackageModel:
         return PriceByPackageRepository.update(record_id, payload)
 
     @staticmethod

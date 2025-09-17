@@ -1,14 +1,14 @@
 import uuid
 from models.recurring_schedule import (
-    CreateRecurringSchedulePayload,
-    UpdateRecurringSchedulePayload,
+    CreateRecurringSchedule,
+    UpdateRecurringSchedule,
     RecurringScheduleModel
 )
 from repositories.recurring_schedule import RecurringScheduleRepository
 
 class RecurringScheduleService:
     @staticmethod
-    def create(payload: CreateRecurringSchedulePayload) -> RecurringScheduleModel:
+    def create(payload: CreateRecurringSchedule) -> RecurringScheduleModel:
         return RecurringScheduleRepository.create(payload)
 
     @staticmethod
@@ -16,7 +16,7 @@ class RecurringScheduleService:
         return RecurringScheduleRepository.get_one(schedule_id)
 
     @staticmethod
-    def update(schedule_id: uuid.UUID, payload: UpdateRecurringSchedulePayload) -> RecurringScheduleModel:
+    def update(schedule_id: uuid.UUID, payload: UpdateRecurringSchedule) -> RecurringScheduleModel:
         return RecurringScheduleRepository.update(schedule_id, payload)
 
     @staticmethod

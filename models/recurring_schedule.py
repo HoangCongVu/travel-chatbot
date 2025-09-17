@@ -25,14 +25,14 @@ class RecurringSchedule(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-class CreateRecurringSchedulePayload(BaseModel):
+class CreateRecurringSchedule(BaseModel):
     schedule_id: uuid.UUID
     recurrence_type: str
     start_date: date
     end_date: date
     weekdays: Optional[List[int]] = None
 
-class UpdateRecurringSchedulePayload(BaseModel):
+class UpdateRecurringSchedule(BaseModel):
     schedule_id: Optional[uuid.UUID] = None
     recurrence_type: Optional[str] = None
     start_date: Optional[date] = None

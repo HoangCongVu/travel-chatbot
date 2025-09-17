@@ -1,8 +1,8 @@
 import uuid
 from fastapi import APIRouter
 from models.tour_highlight_location import (
-    CreateTourHighlightLocationPayload,
-    UpdateTourHighlightLocationPayload,
+    CreateTourHighlightLocation,
+    UpdateTourHighlightLocation,
     TourHighlightLocationModel
 )
 from services.tour_highlight_location import TourHighlightLocationService
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/tour-highlight-locations", tags=["Tour Highlight Loc
 
 
 @router.post("", response_model=TourHighlightLocationModel)
-def create_location(payload: CreateTourHighlightLocationPayload):
+def create_location(payload: CreateTourHighlightLocation):
     return TourHighlightLocationService.create(payload)
 
 
@@ -21,7 +21,7 @@ def get_location(location_id: uuid.UUID):
 
 
 @router.put("", response_model=TourHighlightLocationModel)
-def update_location(location_id: uuid.UUID, payload: UpdateTourHighlightLocationPayload):
+def update_location(location_id: uuid.UUID, payload: UpdateTourHighlightLocation):
     return TourHighlightLocationService.update(location_id, payload)
 
 

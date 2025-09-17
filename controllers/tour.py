@@ -27,7 +27,8 @@ def update_tour(tour_id: uuid.UUID, tour: TourUpdateModel):
 @router.delete("/{tour_id}")
 def delete_tour(tour_id: uuid.UUID):
     """Xóa tour theo ID"""
-    return TourService.delete(tour_id)
+    TourService.delete(tour_id)
+    return {"message": "Tour deleted successfully"}
 
 
 @router.get("/", response_model=list[TourModel])

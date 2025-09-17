@@ -1,7 +1,7 @@
 import uuid
 from models.specific_departure import (
-    CreateSpecificDeparturePayload,
-    UpdateSpecificDeparturePayload,
+    CreateSpecificDeparture,
+    UpdateSpecificDeparture,
     SpecificDepartureModel
 )
 from repositories.specific_departure import SpecificDepartureRepository
@@ -9,7 +9,7 @@ from repositories.specific_departure import SpecificDepartureRepository
 
 class SpecificDepartureService:
     @staticmethod
-    def create(payload: CreateSpecificDeparturePayload) -> SpecificDepartureModel:
+    def create(payload: CreateSpecificDeparture) -> SpecificDepartureModel:
         return SpecificDepartureRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class SpecificDepartureService:
         return SpecificDepartureRepository.get_one(departure_id)
 
     @staticmethod
-    def update(departure_id: uuid.UUID, payload: UpdateSpecificDeparturePayload) -> SpecificDepartureModel:
+    def update(departure_id: uuid.UUID, payload: UpdateSpecificDeparture) -> SpecificDepartureModel:
         return SpecificDepartureRepository.update(departure_id, payload)
 
     @staticmethod

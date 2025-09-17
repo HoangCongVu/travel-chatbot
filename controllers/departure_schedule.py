@@ -1,8 +1,8 @@
 import uuid
 from fastapi import APIRouter, HTTPException
 from models.departure_schedule import (
-    CreateDepartureSchedulePayload,
-    UpdateDepartureSchedulePayload,
+    CreateDepartureSchedule,
+    UpdateDepartureSchedule,
     DepartureScheduleModel
 )
 from services.departure_schedule import DepartureScheduleService
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/departure-schedules", tags=["Departure Schedules"])
 
 
 @router.post("", response_model=DepartureScheduleModel)
-def create_departure_schedule(payload: CreateDepartureSchedulePayload):
+def create_departure_schedule(payload: CreateDepartureSchedule):
     return DepartureScheduleService.create(payload)
 
 
@@ -21,7 +21,7 @@ def get_departure_schedule(schedule_id: uuid.UUID):
 
 
 @router.put("", response_model=DepartureScheduleModel)
-def update_departure_schedule(schedule_id: uuid.UUID, payload: UpdateDepartureSchedulePayload):
+def update_departure_schedule(schedule_id: uuid.UUID, payload: UpdateDepartureSchedule):
     return DepartureScheduleService.update(schedule_id, payload)
 
 

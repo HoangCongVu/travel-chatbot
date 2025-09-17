@@ -22,12 +22,12 @@ class PriceByDate(Base):
     )
 
 
-class CreatePriceByDatePayload(BaseModel):
+class CreatePriceByDate(BaseModel):
     tour_id: uuid.UUID
     date: datetime
     price: float
 
-class UpdatePriceByDatePayload(BaseModel):
+class UpdatePriceByDate(BaseModel):
     tour_id: uuid.UUID | None = None
     date: datetime | None = None
     price: float | None = None

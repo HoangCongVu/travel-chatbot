@@ -21,12 +21,12 @@ class DepartureSchedule(Base):
 
 
 
-class CreateDepartureSchedulePayload(BaseModel):
+class CreateDepartureSchedule(BaseModel):
     tour_id: uuid.UUID
     schedule_type: str
 
 
-class UpdateDepartureSchedulePayload(BaseModel):
+class UpdateDepartureSchedule(BaseModel):
     tour_id: uuid.UUID | None = None
     schedule_type: str | None = None
     model_config = ConfigDict(from_attributes=True)

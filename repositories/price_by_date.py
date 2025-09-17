@@ -3,16 +3,16 @@ from db import Session
 from datetime import datetime, timezone
 from models.price_by_date import (
     PriceByDate,
-    CreatePriceByDatePayload,
-    UpdatePriceByDatePayload,
+    CreatePriceByDate,
+    UpdatePriceByDate,
     PriceByDateModel
 )
 
 class PriceByDateRepository:
     @staticmethod
-    def create(payload: CreatePriceByDatePayload) -> PriceByDateModel:
+    def create(payload: CreatePriceByDate) -> PriceByDateModel:
         with Session() as session:
-            price = PriceByDate(**payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
+            price = PriceByDate(id=uuid.uuid4(), **payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
             session.add(price)
             session.commit()
             session.refresh(price)
@@ -28,7 +28,7 @@ class PriceByDateRepository:
         
     
     @staticmethod
-    def update(price_id: uuid.UUID, data: UpdatePriceByDatePayload) -> PriceByDateModel:
+    def update(price_id: uuid.UUID, data: UpdatePriceByDate) -> PriceByDateModel:
         with Session() as session:
             price = session.get(PriceByDate, price_id)
             for field, value in data.model_dump(exclude_unset=True).items():

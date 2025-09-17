@@ -20,14 +20,12 @@ class TourTypeTable(Base):
     )
 
 class CreateTourType(BaseModel):
-    id: int
+    id: Optional[int] 
     type_name: str
-    model_config = ConfigDict(from_attributes=True)
 
 class UpdateTourType(BaseModel):
     id: int | None = None
     type_name: str | None = None
-    model_config = ConfigDict(from_attributes=True)
 
 class TourTypeModel(BaseModel):
     id: int

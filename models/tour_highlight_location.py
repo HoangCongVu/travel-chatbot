@@ -22,12 +22,12 @@ class TourHighlightLocation(Base):
     )
 
 
-class CreateTourHighlightLocationPayload(BaseModel):
+class CreateTourHighlightLocation(BaseModel):
     tour_id: uuid.UUID
     location_name: str
 
 
-class UpdateTourHighlightLocationPayload(BaseModel):
+class UpdateTourHighlightLocation(BaseModel):
     tour_id: uuid.UUID | None = None
     location_name: str | None = None
 

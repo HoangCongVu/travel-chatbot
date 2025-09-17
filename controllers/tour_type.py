@@ -18,6 +18,9 @@ def create_type(payload: CreateTourType):
 def get_type(type_id: int):
     return TourTypeService.get(type_id)
 
+@router.get("/by-name", response_model=TourTypeModel | None)
+def get_type_by_name(type_name: str):
+    return TourTypeService.get_by_name(type_name)
 
 @router.put("", response_model=TourTypeModel)
 def update_type(type_id: int, payload: UpdateTourType):

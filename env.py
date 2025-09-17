@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int
 
+    OPENAI_API_KEY: str
+
     class Config:
         env_file = ".env"
         extra = "ignore"  # Cho phép bỏ qua key thừa trong .env (nếu có)

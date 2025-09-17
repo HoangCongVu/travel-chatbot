@@ -1,8 +1,8 @@
 from fastapi import APIRouter
 import uuid
 from models.price_by_package import (
-    CreatePriceByPackagePayload,
-    UpdatePriceByPackagePayload,
+    CreatePriceByPackage,
+    UpdatePriceByPackage,
     PriceByPackageModel
 )
 from services.price_by_package import PriceByPackageService
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/price-by-packages", tags=["Price By Packages"])
 
 
 @router.post("", response_model=PriceByPackageModel)
-def create_price(payload: CreatePriceByPackagePayload):
+def create_price(payload: CreatePriceByPackage):
     return PriceByPackageService.create(payload)
 
 
@@ -21,7 +21,7 @@ def get_price(record_id: uuid.UUID):
 
 
 @router.put("", response_model=PriceByPackageModel)
-def update_price(record_id: uuid.UUID, payload: UpdatePriceByPackagePayload):
+def update_price(record_id: uuid.UUID, payload: UpdatePriceByPackage):
     return PriceByPackageService.update(record_id, payload)
 
 

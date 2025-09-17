@@ -1,7 +1,7 @@
 import uuid
 from models.departure_schedule import (
-    CreateDepartureSchedulePayload,
-    UpdateDepartureSchedulePayload,
+    CreateDepartureSchedule,
+    UpdateDepartureSchedule,
     DepartureScheduleModel
 )
 from repositories.departure_schedule import DepartureScheduleRepository
@@ -9,7 +9,7 @@ from repositories.departure_schedule import DepartureScheduleRepository
 
 class DepartureScheduleService:
     @staticmethod
-    def create(payload: CreateDepartureSchedulePayload) -> DepartureScheduleModel:
+    def create(payload: CreateDepartureSchedule) -> DepartureScheduleModel:
         return DepartureScheduleRepository.create(payload)
 
     @staticmethod
@@ -17,7 +17,7 @@ class DepartureScheduleService:
         return DepartureScheduleRepository.get_one(schedule_id)
 
     @staticmethod
-    def update(schedule_id: uuid.UUID, payload: UpdateDepartureSchedulePayload) -> DepartureScheduleModel:
+    def update(schedule_id: uuid.UUID, payload: UpdateDepartureSchedule) -> DepartureScheduleModel:
         return DepartureScheduleRepository.update(schedule_id, payload)
 
     @staticmethod

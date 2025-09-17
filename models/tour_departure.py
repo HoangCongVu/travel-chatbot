@@ -22,12 +22,13 @@ class TourDeparture(Base):
 
 
 
-class CreateTourDeparturePayload(BaseModel):
+class CreateTourDeparture(BaseModel):
     tour_id: uuid.UUID
     departure_name: str
 
 
-class UpdateTourDeparturePayload(BaseModel):
+class UpdateTourDeparture(BaseModel):
+    id: uuid.UUID | None = None
     tour_id: uuid.UUID| None = None
     departure_name: str | None = None
 
