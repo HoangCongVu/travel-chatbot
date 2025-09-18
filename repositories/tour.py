@@ -1,7 +1,6 @@
 import uuid
 from db import Session
 from models.tour import TourTable, TourCreateModel, TourUpdateModel, TourModel
-# from controllers.embedding import generate_embedding
 
 
 class TourRepository:

@@ -13,7 +13,6 @@ class TourDestinationRepository:
     @staticmethod
     def create(payload: CreateTourDestination) -> TourDestinationModel:
         with Session() as session:
-            # destination = TourDestination(**payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc), destination_embedding_vector=np.zeros(1536))
             destination = TourDestination(id=uuid.uuid4(), **payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
             session.add(destination)
             session.commit()

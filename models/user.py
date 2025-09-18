@@ -13,6 +13,7 @@ class UserTable(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone_number: Mapped[str] = mapped_column(String(20), nullable=False)
     email: Mapped[str] = mapped_column(String(255), nullable=False)
+    password: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -26,10 +27,12 @@ class UserModel(BaseModel):
     full_name: str
     phone_number: str
     email: str
+    password: str
     model_config = ConfigDict(from_attributes=True)
     
 class UserCreateModel(BaseModel):
     full_name: str
     phone_number: str
     email: str
+    password: str
     model_config = ConfigDict(from_attributes=True)

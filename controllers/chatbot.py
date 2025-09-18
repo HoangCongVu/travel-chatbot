@@ -5,8 +5,8 @@ from autogen import AssistantAgent
 import uuid
 from repositories.message import MessageRepository
 from models.message import CreateMessagePayload
-# from controllers.sementic_search import search_tour_by_embedding, search_tour_by_destination
-
+from services.agent_tour import AgentTourService
+from repositories.tour import TourRepository
 
 dotenv.load_dotenv()
 
@@ -90,100 +90,82 @@ class ChatbotRequest(BaseModel):
 def chatbot_reply(request: ChatbotRequest):
     user_message = {"role": "user", "content": request.message}
     
-    # Bước 1: Thử trích xuất điểm đến trước
+    # 1️⃣ Trích xuất tour name từ nội dung
     try:
-        extraction_result = destination_agent.generate_reply(
-            messages=[user_message],
-            function_call={"name": "extract_location"}
-        )
-        print("🧠 extraction_result:", extraction_result)
+        tour_name = AgentTourService.extract_info_from_text(request.message)
+        if not tour_name:
+            tour_name = None
+        print(f"✅ Tour name extracted: {tour_name}")
     except Exception as e:
-        print(f"⚠️ Lỗi khi trích xuất điểm đến: {str(e)}")
-        extraction_result = None
+        print(f"⚠️ Lỗi khi trích xuất tên tour: {str(e)}")
+        tour_name = None
 
-    print(f"✅ Điểm đến được trích xuất: {extraction_result}")
-
-    # Bước 2: Nếu có điểm đến, thực hiện tìm kiếm thông tin tour
-    search_info = None
-    if extraction_result:
+    # 2️⃣ Tìm tour cơ bản theo tên để lấy tour_id
+    tour_basic_info = None
+    if tour_name:
         try:
-            search_info = search_tour_by_destination(extraction_result)[0]
+            tour_list = TourRepository.get_all_tour(tour_name)
+            if tour_list:
+                tour_basic_info = tour_list[0]  # lấy tour đầu tiên
+            print(f"✅ Tour basic info: {tour_basic_info}")
         except Exception as e:
-            print(f"⚠️ Lỗi khi tìm kiếm tour: {str(e)}")
-    print(f"✅ Thông tin tour tìm được: {search_info}")
+            print(f"⚠️ Lỗi khi tìm tour: {str(e)}")
 
-    # Bước 3: Lấy lịch sử chat (10 tin nhắn gần nhất)
+    # 3️⃣ Dùng tour_id để truy xuất thông tin chi tiết
+    tour_detail = None
+    if tour_basic_info:
+        try:
+            tour_id = tour_basic_info.get("tour_id")
+            tour_detail = TourRepository.get_tour_detail(tour_id)
+            print(f"✅ Tour detail: {tour_detail}")
+        except Exception as e:
+            print(f"⚠️ Lỗi khi lấy chi tiết tour: {str(e)}")
+
+    # 4️⃣ Lấy lịch sử chat
     try:
         chat_history = MessageRepository.get_recent_messages(chat_id=request.chat_id, limit=10)
-        print(f"🧠 Lịch sử chat: {chat_history}")
     except Exception as e:
         print(f"⚠️ Lỗi khi lấy lịch sử chat: {str(e)}")
         chat_history = []
 
-    # Bước 4: Tạo input cho agent từ lịch sử chat và thông tin mới
+    # 5️⃣ Tạo input cho agent
     messages_to_agent = []
-    # for message in chat_history:
-    # # Đảm bảo role hợp lệ trước khi thêm
-    #     if message.role in ["system", "assistant", "user", "function", "tool", "developer"]:
-    #         messages_to_agent.append({"role": message.role, "content": message.content})
-    #     else:
-    #         print(f"⚠️ Tin nhắn với role không hợp lệ: {message.role}")
-
-    # Nếu có thông tin tìm kiếm, thêm vào trước tin nhắn của người dùng
-    if search_info:
-        messages_to_agent.append({"role": "system", "content": f"Thông tin tour tìm được: {str(search_info)}"})
-
-    # Thêm tin nhắn mới của người dùng vào cuối
+    if tour_detail:
+        messages_to_agent.append({"role": "system", "content": f"Thông tin tour: {tour_detail}"})
     messages_to_agent.append(user_message)
-    print(f"✅ Tin nhắn gửi đến agent: {messages_to_agent}")
 
-    # Bước 5: Gọi agent để lấy câu trả lời
+    # 6️⃣ Gọi agent
     result = agent.generate_reply(messages=messages_to_agent)
-    print("🧠 agent_result:", result)
 
+    # 7️⃣ Xử lý kết quả agent
+    answer = str(result)
     if isinstance(result, dict) and result.get("function_call"):
         args = result["function_call"].get("arguments")
         if args:
             try:
                 response_json = json.loads(args)
                 answer = response_json.get("response", "Xin lỗi, tôi chưa rõ ý bạn.")
-            except Exception as e:
-                print(f"Lỗi khi parse JSON trả lời: {str(e)}")
+            except:
                 answer = "Xin lỗi, định dạng phản hồi không hợp lệ."
-        else:
-            answer = "Xin lỗi, tôi chưa rõ ý bạn."
-    else:
-        answer = str(result)
 
-    # Bước 6: Kiểm tra chat có tồn tại không
+    # 8️⃣ Lưu tin nhắn user
     try:
-        from repositories.chat import ChatRepository
-        chat = ChatRepository.get_one(request.chat_id)
-        if not chat:
-            raise HTTPException(status_code=404, detail=f"Chat với ID {request.chat_id} không tồn tại")
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Chat với ID {request.chat_id} không tồn tại: {str(e)}")
-
-    # Bước 7: Lưu tin nhắn của người dùng
-    try:
-        user_payload = CreateMessagePayload(
-            chat_id=request.chat_id,
-            content=request.message,
-            role="user",  # Vai trò là user
-        )
+        user_payload = CreateMessagePayload(chat_id=request.chat_id, content=request.message, role="user")
         MessageRepository.create(user_payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn của người dùng: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn user: {str(e)}")
 
-    # Bước 8: Lưu tin nhắn của chatbot
+    # 9️⃣ Lưu tin nhắn assistant
     try:
-        chatbot_payload = CreateMessagePayload(
-            chat_id=request.chat_id,
-            content=answer,
-            role="assistant",  # Vai trò là admin
-        )
-        MessageRepository.create(chatbot_payload)
+        assistant_payload = CreateMessagePayload(chat_id=request.chat_id, content=answer, role="assistant")
+        MessageRepository.create(assistant_payload)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn của chatbot: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn assistant: {str(e)}")
 
-    return {"reply": answer, "destination": extraction_result, "message_id": str(request.chat_id)}
+    return {
+        "reply": answer,
+        "tour_name": tour_name,
+        "tour_basic_info": tour_basic_info,
+        "tour_detail": tour_detail,
+        "message_id": str(request.chat_id)
+    }
