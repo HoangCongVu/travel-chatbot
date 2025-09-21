@@ -1,9 +1,5 @@
 import uuid
-from models.tour_type import (
-    CreateTourType,
-    UpdateTourType,
-    TourTypeModel
-)
+from models.tour_type import CreateTourType, UpdateTourType, TourTypeModel
 from repositories.tour_type import TourTypeRepository
 
 

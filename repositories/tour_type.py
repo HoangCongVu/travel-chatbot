@@ -1,11 +1,5 @@
-# repositories/tour_type.py
 from db import Session
-from models.tour_type import (
-    TourTypeTable,
-    CreateTourType,
-    UpdateTourType,
-    TourTypeModel
-)
+from models.tour_type import TourTypeTable, CreateTourType, UpdateTourType, TourTypeModel
 
 
 class TourTypeRepository:
@@ -24,7 +18,6 @@ class TourTypeRepository:
     def get_one(type_id: int) -> TourTypeModel | None:
         with Session() as session:
             tour_type = session.get(TourTypeTable, type_id)
-            # chỉ validate nếu có kết quả, nếu không thì trả về None
             return TourTypeModel.model_validate(tour_type) if tour_type else None
 
     @staticmethod

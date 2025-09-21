@@ -1,9 +1,5 @@
 import uuid
-from models.specific_departure import (
-    CreateSpecificDeparture,
-    UpdateSpecificDeparture,
-    SpecificDepartureModel
-)
+from models.specific_departure import CreateSpecificDeparture, UpdateSpecificDeparture, SpecificDepartureModel
 from repositories.specific_departure import SpecificDepartureRepository
 
 

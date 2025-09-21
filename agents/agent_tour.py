@@ -28,7 +28,7 @@ Nhiệm vụ:
       "itinerary_url": "string",
       "detail_url": "string",
       "promotion_info": "string",
-      "price_type": "string",
+      "price_type": "string",   # "Cố định" | "Dựa trên ngày tháng" | "Dựa trên gói" | "Theo yêu cầu"
       "tour_type_id": integer,
       "tour_type": {
         "tour_type_id": integer,
@@ -40,7 +40,7 @@ Nhiệm vụ:
       "departure_schedules": [
         {
           "schedule_type": "recurring",
-          "recurrence_type": "string",  # "weekly", "monthly", "yearly"
+          "recurrence_type": "string",  # "daily", "weekly", "monthly", "yearly"
           "start_date": "YYYY-MM-DD",
           "end_date": "YYYY-MM-DD",
           "specific_dates": [],
@@ -115,27 +115,43 @@ Quy tắc chi tiết:
    - Nếu văn bản có cả recurring và specific → tạo 2 object riêng biệt trong mảng.
    - Không được trộn cả recurring và specific trong cùng 1 object.
 
-11. Giá (price):
+11. Giá & price_type:
+   - Nếu tour chỉ có 1 giá duy nhất → 
+     price_type = "Cố định".
+   - Nếu giá thay đổi theo **ngày cụ thể** → 
+     price_type = "Dựa trên ngày tháng", điền vào "price_by_dates" dạng {"date": "YYYY-MM-DD", "price": float}.
+   - Nếu giá thay đổi theo **gói dịch vụ** → 
+     price_type = "Dựa trên gói", điền vào "price_by_packages" dạng {"package_name": "string", "price": float}.
+   - Nếu tour không công bố giá, chỉ ghi "Liên hệ" hoặc "theo yêu cầu" → 
+     price_type = "Theo yêu cầu", không hiển thị price.
+   - Luôn convert giá thành float (bỏ ký hiệu VNĐ, dấu . hoặc , phân cách).
+
+12. Giá (price):
    - Luôn float (dù là số nguyên).
    - Bỏ dấu phẩy, dấu chấm ngăn cách hàng nghìn, chữ VNĐ hoặc đơn vị tiền.
    - Ví dụ: "12,500,000 VNĐ" → 12500000.0
 
-12. Visa prices:
+13. Visa prices:
    - Nếu có giá visa riêng → thêm vào.
    - Nếu chỉ ghi "bao gồm visa" thì bỏ qua.
 
-13. Price by packages:
+14. Price by packages:
    - Nếu giá theo mùa hoặc theo gói → package_name chính xác như trong văn bản.
    - Object: {"package_name": "string", "price": <float>}.
 
-14. Price by dates:
+15. Price by dates:
    - Nếu văn bản có ngày cụ thể kèm giá → đưa vào đây.
    - Date phải đúng format YYYY-MM-DD.
    - Không được suy diễn ngày.
 
-15. Không được thêm dữ liệu ngoài văn bản (ngoại trừ số ngày từ "X ngày Y đêm").
+16. recurrence_type: 
+     - "daily": hàng ngày
+     - "weekly": hàng tuần
+     - "monthly": hàng tháng
+     - "yearly": hàng năm
+17. Không được thêm dữ liệu ngoài văn bản (ngoại trừ số ngày từ "X ngày Y đêm").
 
-16. JSON trả về phải duy nhất, hợp lệ, không markdown, không văn bản thừa.
+18. JSON trả về phải duy nhất, hợp lệ, không markdown, không văn bản thừa.
 """
 
 # Agent duy nhất

@@ -21,4 +21,4 @@ class VisaPriceService():
         return "Visa Price deleted successfully"
     @staticmethod
     def get_all():
-        return VisaPriceRepository.get_all_visa_price()
+        return VisaPriceRepository.get_all()

@@ -1,10 +1,20 @@
 import uuid
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from models.tour import TourCreateModel, TourUpdateModel, TourModel
 from services.tour import TourService
 
 router = APIRouter(prefix="/tours", tags=["Tours"])
 
+
+@router.get("/search-text")
+def search_tour(
+    query: str = Query(..., description="Từ khóa tìm kiếm tour"),
+    limit: int = Query(5, description="Số lượng kết quả tối đa")
+):
+    """
+    API tìm kiếm tour theo text (semantic search).
+    """
+    return TourService.search_by_text(query=query, limit=limit)
 
 @router.post("", response_model=TourModel)
 def create_tour(tour: TourCreateModel):

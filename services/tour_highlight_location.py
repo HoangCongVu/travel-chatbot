@@ -1,9 +1,5 @@
 import uuid
-from models.tour_highlight_location import (
-    CreateTourHighlightLocation,
-    UpdateTourHighlightLocation,
-    TourHighlightLocationModel
-)
+from models.tour_highlight_location import CreateTourHighlightLocation, UpdateTourHighlightLocation, TourHighlightLocationModel
 from repositories.tour_highlight_location import TourHighlightLocationRepository
 
 

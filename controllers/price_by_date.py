@@ -1,10 +1,6 @@
 import uuid
 from fastapi import APIRouter
-from models.price_by_date import (
-    CreatePriceByDate,
-    UpdatePriceByDate,
-    PriceByDateModel
-)
+from models.price_by_date import CreatePriceByDate, UpdatePriceByDate, PriceByDateModel
 from services.price_by_date import PriceByDateService
 
 router = APIRouter(prefix="/price-by-dates", tags=["Price By Dates"])

@@ -1,9 +1,5 @@
 import uuid
-from models.tour_departure import (
-    CreateTourDeparture,
-    UpdateTourDeparture,
-    TourDepartureModel
-)
+from models.tour_departure import CreateTourDeparture, UpdateTourDeparture, TourDepartureModel
 from repositories.tour_departure import TourDepartureRepository
 
 
@@ -23,3 +19,10 @@ class TourDepartureService:
     @staticmethod
     def delete(departure_id: uuid.UUID):
         return TourDepartureRepository.delete(departure_id)
+
+    @staticmethod
+    def search_by_text(query: str, limit: int = 5):
+        """
+        Tìm kiếm tour departure theo text (semantic search).
+        """
+        return TourDepartureRepository.search_by_text(query=query, limit=limit)

@@ -1,9 +1,5 @@
 import uuid
-from models.price_by_date import (
-    CreatePriceByDate,
-    UpdatePriceByDate,
-    PriceByDateModel
-)
+from models.price_by_date import CreatePriceByDate, UpdatePriceByDate, PriceByDateModel
 from repositories.price_by_date import PriceByDateRepository
 
 

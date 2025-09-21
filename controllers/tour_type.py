@@ -1,10 +1,7 @@
 from fastapi import APIRouter
-from models.tour_type import (
-    CreateTourType,
-    UpdateTourType,
-    TourTypeModel
-)
+from models.tour_type import CreateTourType, UpdateTourType, TourTypeModel
 from services.tour_type import TourTypeService
+
 
 router = APIRouter(prefix="/tour-types", tags=["Tour Types"])
 

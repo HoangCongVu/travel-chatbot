@@ -36,7 +36,7 @@ async def upload_and_process_file(
         return {
             "message": "Upload, read & process file successfully",
             "file_url": upload_result.url,
-            "file_content_preview": content[:500],  # chỉ trả về 500 ký tự cho nhẹ
+            # "file_content_preview": content[:500],  chỉ trả về 500 ký tự cho nhẹ
             "tour_data": tour_data
         }
 

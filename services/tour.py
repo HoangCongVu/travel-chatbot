@@ -1,6 +1,7 @@
 import uuid
 from models.tour import TourCreateModel, TourUpdateModel, TourModel
 from repositories.tour import TourRepository
+from datetime import date
 
 
 class TourService:
@@ -23,3 +24,17 @@ class TourService:
     @staticmethod
     def get_all() -> list[TourModel]:
         return TourRepository.get_all()
+
+    @staticmethod
+    def search_by_text(query: str, limit: int = 5):
+        """
+        Tìm kiếm tour theo text (semantic search).
+        """
+        return TourRepository.search_by_text(query=query, limit=limit)
+
+    @staticmethod
+    def tour_by_date(target_date: date):
+        """
+        Tìm kiếm tour theo ngày (dựa vào specific_departures / recurring_schedules / price_by_dates).
+        """
+        return TourRepository.tour_by_date(target_date)

@@ -6,13 +6,16 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from db import Base
 from pydantic import BaseModel, ConfigDict
+from pgvector.sqlalchemy import Vector
+
 
 class TourDestination(Base):
     __tablename__ = "tour_destinations"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4(), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     tour_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tours.id"), nullable=False)
     destination_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    tour_destination_embedding_vector: Mapped[list[float]] = mapped_column(Vector(1536), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -37,6 +40,12 @@ class TourDestinationModel(BaseModel):
     id: uuid.UUID
     tour_id: uuid.UUID
     destination_name: str
+    tour_destination_embedding: Optional[list[float]] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class SearchTourDestination(BaseModel):
+    id: uuid.UUID
+    tour_id: uuid.UUID
+    destination_name: str

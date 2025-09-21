@@ -1,19 +1,15 @@
 import uuid
 from db import Session
 from datetime import datetime, timezone
-from models.specific_departure import (
-    SpecificDeparture,
-    CreateSpecificDeparture,
-    UpdateSpecificDeparture,
-    SpecificDepartureModel
-)
+from models.specific_departure import SpecificDeparture, CreateSpecificDeparture, UpdateSpecificDeparture, SpecificDepartureModel
+from models.departure_schedule import DepartureSchedule
 
 
 class SpecificDepartureRepository:
     @staticmethod
     def create(payload: CreateSpecificDeparture) -> SpecificDepartureModel:
         with Session() as session:
-            departure = SpecificDeparture(**payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
+            departure = SpecificDeparture(**payload.model_dump())
             session.add(departure)
             session.commit()
             session.refresh(departure)
@@ -41,3 +37,15 @@ class SpecificDepartureRepository:
             departure = session.get(SpecificDeparture, departure_id)
             session.delete(departure)
             session.commit()
+            return {"message": "Specific departure deleted successfully"}
+
+    @staticmethod
+    def get_by_tour_id(tour_id: uuid.UUID) -> list[SpecificDepartureModel]:
+        with Session() as session:
+            departures = (
+                session.query(SpecificDeparture)
+                .join(DepartureSchedule, SpecificDeparture.schedule_id == DepartureSchedule.id)
+                .filter(DepartureSchedule.tour_id == tour_id)
+                .all()
+            )
+            return [SpecificDepartureModel.model_validate(d) for d in departures]

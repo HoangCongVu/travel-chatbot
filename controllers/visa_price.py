@@ -20,5 +20,5 @@ def update_visa_price(visa_price_id: uuid.UUID, visa_price: CreateVisaPrice):
 def delete_visa_price(visa_price_id: uuid.UUID):
     return VisaPriceService.delete_visa_price(visa_price_id)
 @router.get("", response_model=list[VisaPriceModel])
-def get_all_visa_price():
-    return VisaPriceService.get_all_visa_price()
+def get_all():
+    return VisaPriceService.get_all()

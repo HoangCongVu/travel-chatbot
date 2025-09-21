@@ -21,7 +21,8 @@ tour_highlight_location,
 departure_schedule,
 recurring_schedule,
 specific_departure,
-agent_tour
+agent_tour,
+tour_search,
 )
 
 def create_app() -> FastAPI:
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(recurring_schedule.router, prefix="/api")
     app.include_router(specific_departure.router, prefix="/api")
     app.include_router(agent_tour.router, prefix="/api")
+    app.include_router(tour_search.router, prefix="/api")
     return app
 
 

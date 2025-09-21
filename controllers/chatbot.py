@@ -1,26 +1,27 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import os, json, dotenv
+import os, json, dotenv, uuid
 from autogen import AssistantAgent
-import uuid
 from repositories.message import MessageRepository
 from models.message import CreateMessagePayload
-from services.agent_tour import AgentTourService
-from repositories.tour import TourRepository
+from services.tour import TourService
+from services.tour_destination import TourDestinationService
+from datetime import datetime
+from db import Session
 
 dotenv.load_dotenv()
 
 router = APIRouter(prefix="/chat-bot", tags=["Chat Bot"])
 
-# Lấy cấu hình model từ môi trường
+# Config cho LLM
 config_list = [
     {
         "model": "gpt-4o-mini",
-        "api_key": os.getenv("OPENAI_API_KEY")
+        "api_key": os.getenv("OPENAI_API_KEY"),
     }
 ]
 
-# Schema để buộc model trả lời câu hỏi
+# Schema ép model phải trả lời đúng format
 function_schema = {
     "name": "chatbot_reply",
     "description": "Trả lời câu hỏi của người dùng về tour",
@@ -29,56 +30,27 @@ function_schema = {
         "properties": {
             "response": {"type": "string"}
         },
-        "required": ["response"]
-    }
+        "required": ["response"],
+    },
 }
 
-# Schema để trích xuất điểm đến
-destination_extraction_schema = {
-    "name": "extract_location",
-    "description": "Trích xuất tên địa điểm từ văn bản đầu vào.",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "location_name": {
-                "type": "string",
-                "description": "Tên địa điểm được trích xuất"
-            }
-        },
-        "required": ["location_name"]
-    }
-}
-
-# Assistant Agent setup cho chatbot
+# Chatbot Agent
 agent = AssistantAgent(
     name="TourAssistant",
     system_message="""
 Bạn là trợ lý AI chuyên tư vấn tour du lịch.
-Bạn sẽ nhận được một câu hỏi từ người dùng và thông tin đuọc tìm thấy từ cơ sở dữ liệu.
-- Nếu câu hỏi không liên quan đến tour du lịch, hãy trả lời một cách lịch sự và ngắn gọn.
-- Nếu câu hỏi liên quan đến tour du lịch, hãy trả lời dựa trên thông tin đã tìm thấy.
-- Nếu không tìm thấy thông tin nào, hãy trả lời rằng không có thông tin nào được tìm thấy.
-
-Chỉ trả lời ngắn gọn, đúng trọng tâm. Trả lời bằng tiếng Việt.
-
+Bạn nhận được câu hỏi từ người dùng và thông tin từ database.
+- Nếu không liên quan du lịch: trả lời lịch sự, ngắn gọn.
+- Nếu liên quan: trả lời dựa trên thông tin có.
+- Nếu không tìm thấy thông tin: nói rằng không có dữ liệu.
+- Nếu người dùng hỏi về tour nhưng không khớp chính xác, hãy trả lời bằng tour gần nhất trong thông tin cung cấp.
+Không được trả lời "không có dữ liệu" nếu trong context có ít nhất một tour.
+Trả lời ngắn gọn, tiếng Việt.
 """,
     llm_config={
         "config_list": config_list,
         "functions": [function_schema],
-    }
-)
-
-# Assistant Agent setup cho trích xuất điểm đến
-destination_agent = AssistantAgent(
-    name="DestinationExtractor",
-    system_message="""
-Bạn là một trợ lý AI chuyên trích xuất địa điểm từ văn bản.
-- Nếu tìm thấy địa điểm, chỉ trả về địa điểm đó dưới dạng chuỗi và không thêm bất cứ thứ gì.
-- Nếu không tìm thấy địa điểm, không được trả lời gì cả.
-""",
-    llm_config={
-        "config_list": config_list
-    }
+    },
 )
 
 # Request model
@@ -86,86 +58,131 @@ class ChatbotRequest(BaseModel):
     chat_id: uuid.UUID
     message: str
 
-@router.post("")
+
+@router.post("/")
 def chatbot_reply(request: ChatbotRequest):
     user_message = {"role": "user", "content": request.message}
-    
-    # 1️⃣ Trích xuất tour name từ nội dung
-    try:
-        tour_name = AgentTourService.extract_info_from_text(request.message)
-        if not tour_name:
-            tour_name = None
-        print(f"✅ Tour name extracted: {tour_name}")
-    except Exception as e:
-        print(f"⚠️ Lỗi khi trích xuất tên tour: {str(e)}")
-        tour_name = None
 
-    # 2️⃣ Tìm tour cơ bản theo tên để lấy tour_id
-    tour_basic_info = None
-    if tour_name:
-        try:
-            tour_list = TourRepository.get_all_tour(tour_name)
-            if tour_list:
-                tour_basic_info = tour_list[0]  # lấy tour đầu tiên
-            print(f"✅ Tour basic info: {tour_basic_info}")
-        except Exception as e:
-            print(f"⚠️ Lỗi khi tìm tour: {str(e)}")
-
-    # 3️⃣ Dùng tour_id để truy xuất thông tin chi tiết
     tour_detail = None
-    if tour_basic_info:
-        try:
-            tour_id = tour_basic_info.get("tour_id")
-            tour_detail = TourRepository.get_tour_detail(tour_id)
-            print(f"✅ Tour detail: {tour_detail}")
-        except Exception as e:
-            print(f"⚠️ Lỗi khi lấy chi tiết tour: {str(e)}")
+    answer = "Xin lỗi, tôi chưa rõ ý bạn."
 
-    # 4️⃣ Lấy lịch sử chat
     try:
-        chat_history = MessageRepository.get_recent_messages(chat_id=request.chat_id, limit=10)
+        # 1️⃣ Xác định intent: ngày hay điểm đến
+        target_date = None
+        for fmt in ("%d/%m/%Y", "%d/%m"):
+            try:
+                parsed_date = datetime.strptime(request.message, fmt).date()
+                if fmt == "%d/%m":
+                    parsed_date = parsed_date.replace(year=datetime.now().year)
+                target_date = parsed_date
+                break
+            except ValueError:
+                continue
+
+        if target_date:
+            # Người dùng hỏi theo ngày
+            tour_results = TourService.tour_by_date(target_date)
+            if tour_results:
+                # tour_results có thể là list → chỉ lấy name hoặc info cơ bản
+                tour_detail = [
+                    {"tour_name": t.tour_name} for t in tour_results
+                ]
+                answer = f"Tôi tìm thấy {len(tour_results)} tour khởi hành vào ngày {target_date.strftime('%d/%m/%Y')}."
+            else:
+                answer = f"Hiện chưa có tour nào khởi hành vào ngày {target_date.strftime('%d/%m/%Y')}."
+        else:
+            tour_detail = None  # reset trước khi check
+            # Người dùng hỏi theo điểm đến
+            destination_results = TourDestinationService.search_by_text(request.message, limit=3)
+            if destination_results:
+                # Lấy tour_id từ destination đầu tiên
+                tour_id = destination_results[0].tour_id
+                # Lấy chi tiết tour từ TourService
+                tour_obj = TourService.get(tour_id)
+                if tour_obj:
+                    # ⚠️ bỏ id, chỉ lấy thông tin cần cho user
+                    tour_detail = {
+                        "tour_name": tour_obj.tour_name,
+                    }
+                    answer = f"Tôi tìm thấy tour: {tour_obj.tour_name}"
+                else:
+                    tour_detail = None
+                    answer = "Xin lỗi, tôi không tìm thấy chi tiết tour."
+            else:
+                tour_detail = None
+                answer = "Xin lỗi, tôi không tìm thấy tour nào phù hợp."
     except Exception as e:
-        print(f"⚠️ Lỗi khi lấy lịch sử chat: {str(e)}")
+        print(f"⚠️ Intent detect error: {str(e)}")
+
+    # 2️⃣ Lấy lịch sử chat
+    try:
+        chat_history_objs = MessageRepository.get_recent_messages(
+            chat_id=request.chat_id, limit=10
+        )
+        # Chuyển sang dạng dict để agent hiểu
+        chat_history = [{"role": msg.role, "content": msg.content} for msg in chat_history_objs]
+    except Exception as e:
+        print(f"⚠️ Lỗi lấy chat history: {str(e)}")
         chat_history = []
 
-    # 5️⃣ Tạo input cho agent
+    # 3️⃣ Ghép context cho agent
     messages_to_agent = []
     if tour_detail:
-        messages_to_agent.append({"role": "system", "content": f"Thông tin tour: {tour_detail}"})
+        messages_to_agent.append(
+            {
+                "role": "system",
+                "content": f"Thông tin tour: {json.dumps(tour_detail, ensure_ascii=False)}"
+            }
+        )
+    messages_to_agent.extend(chat_history)
     messages_to_agent.append(user_message)
 
-    # 6️⃣ Gọi agent
-    result = agent.generate_reply(messages=messages_to_agent)
-
-    # 7️⃣ Xử lý kết quả agent
-    answer = str(result)
-    if isinstance(result, dict) and result.get("function_call"):
-        args = result["function_call"].get("arguments")
-        if args:
-            try:
-                response_json = json.loads(args)
-                answer = response_json.get("response", "Xin lỗi, tôi chưa rõ ý bạn.")
-            except:
-                answer = "Xin lỗi, định dạng phản hồi không hợp lệ."
-
-    # 8️⃣ Lưu tin nhắn user
+    # 4️⃣ Gọi agent để refine câu trả lời
     try:
-        user_payload = CreateMessagePayload(chat_id=request.chat_id, content=request.message, role="user")
-        MessageRepository.create(user_payload)
+        result = agent.generate_reply(messages=messages_to_agent)
+        if isinstance(result, dict) and result.get("function_call"):
+            args = result["function_call"].get("arguments")
+            if args:
+                try:
+                    response_json = json.loads(args)
+                    answer = response_json.get("response", answer)
+                except Exception as e:
+                    print(f"⚠️ Parse JSON fail: {str(e)}")
+        else:
+            answer = str(result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn user: {str(e)}")
+        print(f"⚠️ Lỗi gọi agent: {str(e)}")
 
-    # 9️⃣ Lưu tin nhắn assistant
+    # 5️⃣ Fallback: nếu agent trả lời "không có dữ liệu" nhưng thực tế có tour
+    if tour_detail and "không có dữ liệu" in answer.lower():
+        if isinstance(tour_detail, list) and len(tour_detail) > 0:
+            answer = f"Tôi tìm thấy tour: {tour_detail[0].get('tour_name')}"
+        elif isinstance(tour_detail, dict):
+            answer = f"Tôi tìm thấy tour: {tour_detail.get('tour_name')}"
+
+    # 6️⃣ Lưu message user
     try:
-        assistant_payload = CreateMessagePayload(chat_id=request.chat_id, content=answer, role="assistant")
-        MessageRepository.create(assistant_payload)
+        MessageRepository.create(
+            CreateMessagePayload(
+                chat_id=request.chat_id, content=request.message, role="user"
+            )
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Lỗi khi lưu tin nhắn assistant: {str(e)}")
+        print(f"⚠️ Lỗi lưu tin nhắn user: {str(e)}")
 
+    # 7️⃣ Lưu message assistant
+    try:
+        MessageRepository.create(
+            CreateMessagePayload(
+                chat_id=request.chat_id, content=answer, role="assistant"
+            )
+        )
+    except Exception as e:
+        print(f"⚠️ Lỗi lưu tin nhắn assistant: {str(e)}")
+
+    # 8️⃣ Trả về kết quả
     return {
+        "status": "success",
         "reply": answer,
-        "tour_name": tour_name,
-        "tour_basic_info": tour_basic_info,
-        "tour_detail": tour_detail,
-        "message_id": str(request.chat_id)
+        "tour_detail": tour_detail
     }

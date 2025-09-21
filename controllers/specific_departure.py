@@ -1,11 +1,8 @@
 import uuid
 from fastapi import APIRouter
-from models.specific_departure import (
-    CreateSpecificDeparture,
-    UpdateSpecificDeparture,
-    SpecificDepartureModel
-)
+from models.specific_departure import CreateSpecificDeparture, UpdateSpecificDeparture, SpecificDepartureModel
 from services.specific_departure import SpecificDepartureService
+
 
 router = APIRouter(prefix="/specific-departures", tags=["Specific Departures"])
 

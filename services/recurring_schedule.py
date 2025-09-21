@@ -1,10 +1,7 @@
 import uuid
-from models.recurring_schedule import (
-    CreateRecurringSchedule,
-    UpdateRecurringSchedule,
-    RecurringScheduleModel
-)
+from models.recurring_schedule import CreateRecurringSchedule, UpdateRecurringSchedule, RecurringScheduleModel
 from repositories.recurring_schedule import RecurringScheduleRepository
+
 
 class RecurringScheduleService:
     @staticmethod

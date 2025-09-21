@@ -1,11 +1,8 @@
 from fastapi import APIRouter
 import uuid
-from models.price_by_package import (
-    CreatePriceByPackage,
-    UpdatePriceByPackage,
-    PriceByPackageModel
-)
+from models.price_by_package import CreatePriceByPackage, UpdatePriceByPackage, PriceByPackageModel
 from services.price_by_package import PriceByPackageService
+
 
 router = APIRouter(prefix="/price-by-packages", tags=["Price By Packages"])
 

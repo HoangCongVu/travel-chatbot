@@ -1,19 +1,14 @@
 import uuid
 from db import Session
 from datetime import datetime, timezone
-from models.tour_highlight_location import (
-    TourHighlightLocation,
-    CreateTourHighlightLocation,
-    UpdateTourHighlightLocation,
-    TourHighlightLocationModel
-)
+from models.tour_highlight_location import TourHighlightLocation, CreateTourHighlightLocation, UpdateTourHighlightLocation, TourHighlightLocationModel
 
 
 class TourHighlightLocationRepository:
     @staticmethod
     def create(payload: CreateTourHighlightLocation) -> TourHighlightLocationModel:
         with Session() as session:
-            location = TourHighlightLocation(id=uuid.uuid4(), **payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
+            location = TourHighlightLocation(id=uuid.uuid4(), **payload.model_dump())
             session.add(location)
             session.commit()
             session.refresh(location)

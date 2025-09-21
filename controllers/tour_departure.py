@@ -1,10 +1,6 @@
 import uuid
-from fastapi import APIRouter
-from models.tour_departure import (
-    CreateTourDeparture,
-    UpdateTourDeparture,
-    TourDepartureModel
-)
+from fastapi import APIRouter, Query
+from models.tour_departure import CreateTourDeparture, UpdateTourDeparture, TourDepartureModel
 from services.tour_departure import TourDepartureService
 
 
@@ -30,3 +26,13 @@ def update_departure(departure_id: uuid.UUID, payload: UpdateTourDeparture):
 def delete_departure(departure_id: uuid.UUID):
     TourDepartureService.delete(departure_id)
     return {"message": "Tour departure deleted successfully"}
+
+@router.get("/search-text")
+def search_tour_departures(
+    query: str = Query(..., description="Từ khóa tìm kiếm tour departure"),
+    limit: int = Query(5, description="Số lượng kết quả tối đa")
+):
+    """
+    API tìm kiếm tour departure theo text (semantic search).
+    """
+    return TourDepartureService.search_by_text(query=query, limit=limit)

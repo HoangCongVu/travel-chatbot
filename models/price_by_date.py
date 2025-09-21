@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 class PriceByDate(Base):
     __tablename__ = "price_by_dates"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4(), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     tour_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tours.id"), nullable=False)
     date: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False)
     price: Mapped[float] = mapped_column(DECIMAL(10, 2))

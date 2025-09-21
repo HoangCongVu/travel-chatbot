@@ -1,9 +1,5 @@
 import uuid
-from models.departure_schedule import (
-    CreateDepartureSchedule,
-    UpdateDepartureSchedule,
-    DepartureScheduleModel
-)
+from models.departure_schedule import CreateDepartureSchedule, UpdateDepartureSchedule, DepartureScheduleModel
 from repositories.departure_schedule import DepartureScheduleRepository
 
 

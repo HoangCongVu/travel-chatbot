@@ -7,7 +7,7 @@ class VisaPriceRepository():
     @staticmethod
     def create(payload: CreateVisaPrice) -> VisaPriceModel:
         with Session() as session:
-            visa_price = VisaPriceTable(id=uuid.uuid4(), **payload.model_dump(), created_at=datetime.now(tz=timezone.utc), updated_at=datetime.now(tz=timezone.utc))
+            visa_price = VisaPriceTable(id=uuid.uuid4(), **payload.model_dump())
             session.add(visa_price)
             session.commit()
             session.refresh(visa_price)
@@ -42,7 +42,13 @@ class VisaPriceRepository():
                 session.commit()
             return visa_price
     @staticmethod
-    def get_all_visa_price():
+    def get_all():
         with Session() as session:
             visa_prices = session.query(VisaPriceTable).all()
             return [VisaPriceModel.model_validate(vp) for vp in visa_prices]
+
+    @staticmethod
+    def get_by_tour_id(tour_id: uuid.UUID) -> list[VisaPriceModel]:
+        with Session() as session:
+            visa_prices = session.query(VisaPriceTable).filter(VisaPriceTable.tour_id == tour_id).all()
+            return [VisaPriceModel.model_validate(v) for v in visa_prices]

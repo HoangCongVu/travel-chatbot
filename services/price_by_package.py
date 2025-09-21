@@ -1,9 +1,5 @@
 import uuid
-from models.price_by_package import (
-    CreatePriceByPackage,
-    UpdatePriceByPackage,
-    PriceByPackageModel
-)
+from models.price_by_package import CreatePriceByPackage, UpdatePriceByPackage, PriceByPackageModel
 from repositories.price_by_package import PriceByPackageRepository
 
 

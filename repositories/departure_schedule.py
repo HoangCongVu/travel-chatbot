@@ -1,11 +1,6 @@
 import uuid
 from db import Session
-from models.departure_schedule import (
-    DepartureSchedule,
-    CreateDepartureSchedule,
-    UpdateDepartureSchedule,
-    DepartureScheduleModel
-)
+from models.departure_schedule import DepartureSchedule, CreateDepartureSchedule, UpdateDepartureSchedule, DepartureScheduleModel
 
 
 class DepartureScheduleRepository:
@@ -40,3 +35,9 @@ class DepartureScheduleRepository:
             schedule = session.get(DepartureSchedule, schedule_id)
             session.delete(schedule)
             session.commit()
+    
+    @staticmethod
+    def get_by_tour_id(tour_id: uuid.UUID) -> list[DepartureScheduleModel]:
+        with Session() as session:
+            schedules = session.query(DepartureSchedule).filter(DepartureSchedule.tour_id == tour_id).all()
+            return [DepartureScheduleModel.model_validate(s) for s in schedules]

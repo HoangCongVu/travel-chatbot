@@ -1,11 +1,8 @@
 import uuid
 from fastapi import APIRouter
-from models.tour_highlight_location import (
-    CreateTourHighlightLocation,
-    UpdateTourHighlightLocation,
-    TourHighlightLocationModel
-)
+from models.tour_highlight_location import CreateTourHighlightLocation, UpdateTourHighlightLocation, TourHighlightLocationModel
 from services.tour_highlight_location import TourHighlightLocationService
+
 
 router = APIRouter(prefix="/tour-highlight-locations", tags=["Tour Highlight Locations"])
 

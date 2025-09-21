@@ -1,14 +1,11 @@
 import uuid
 from fastapi import APIRouter
-from models.recurring_schedule import (
-    CreateRecurringSchedule,
-    UpdateRecurringSchedule,
-    RecurringScheduleModel
-)
+from models.recurring_schedule import CreateRecurringSchedule, UpdateRecurringSchedule, RecurringScheduleModel
 from services.recurring_schedule import RecurringScheduleService
 
 
 router = APIRouter(prefix="/recurring-schedules", tags=["Recurring Schedules"])
+
 
 @router.post("", response_model=RecurringScheduleModel)
 def create_schedule(payload: CreateRecurringSchedule):

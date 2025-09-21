@@ -1,11 +1,8 @@
 import uuid
 from db import Session
-from models.recurring_schedule import (
-    RecurringSchedule,
-    CreateRecurringSchedule,
-    UpdateRecurringSchedule,
-    RecurringScheduleModel
-)
+from models.recurring_schedule import RecurringSchedule, CreateRecurringSchedule, UpdateRecurringSchedule, RecurringScheduleModel
+from models.departure_schedule import DepartureSchedule
+
 
 class RecurringScheduleRepository:
     @staticmethod
@@ -45,3 +42,14 @@ class RecurringScheduleRepository:
                 raise ValueError(f"Recurring schedule with ID {schedule_id} not found.")
             session.delete(schedule)
             session.commit()
+    
+    @staticmethod
+    def get_by_tour_id(tour_id: uuid.UUID) -> list[RecurringScheduleModel]:
+        with Session() as session:
+            schedules = (
+                session.query(RecurringSchedule)
+                .join(DepartureSchedule, RecurringSchedule.schedule_id == DepartureSchedule.id)
+                .filter(DepartureSchedule.tour_id == tour_id)
+                .all()
+            )
+            return [RecurringScheduleModel.model_validate(s) for s in schedules]

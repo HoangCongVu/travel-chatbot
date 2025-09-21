@@ -1222,6 +1222,21 @@ files = [
 ]
 
 [[package]]
+name = "pgvector"
+version = "0.4.1"
+description = "pgvector support for Python"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pgvector-0.4.1-py3-none-any.whl", hash = "sha256:34bb4e99e1b13d08a2fe82dda9f860f15ddcd0166fbb25bffe15821cbfeb7362"},
+    {file = "pgvector-0.4.1.tar.gz", hash = "sha256:83d3a1c044ff0c2f1e95d13dfb625beb0b65506cfec0941bfe81fd0ad44f4003"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "psycopg2-binary"
 version = "2.9.10"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
@@ -2353,6 +2368,31 @@ docs = ["Sphinx (>=4.1.2,<4.2.0)", "sphinx-rtd-theme (>=0.5.2,<0.6.0)", "sphinxc
 test = ["aiohttp (>=3.10.5)", "flake8 (>=5.0,<6.0)", "mypy (>=0.800)", "psutil", "pyOpenSSL (>=23.0.0,<23.1.0)", "pycodestyle (>=2.9.0,<2.10.0)"]
 
 [[package]]
+name = "vector"
+version = "1.6.3"
+description = "Vector classes and utilities"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "vector-1.6.3-py3-none-any.whl", hash = "sha256:cdfbb6d1ea3100db56317812e53bb6aacb9d35fc9fff282066c4cc19fe5aab46"},
+    {file = "vector-1.6.3.tar.gz", hash = "sha256:a85149a62fcaa8a4d95214ca217f3910ea6800d79d65ef1cfb1005720b4f713a"},
+]
+
+[package.dependencies]
+numpy = ">=1.13.3"
+packaging = ">=19"
+
+[package.extras]
+awkward = ["awkward (>=2)"]
+dev = ["awkward (>=2)", "dask-awkward", "nox", "numba (>=0.57) ; python_version < \"3.14\"", "papermill (>=2.4)", "pytest (>=6)", "pytest-cov (>=3)", "pytest-doctestplus", "sympy"]
+docs = ["awkward (>=2)", "ipykernel", "myst-parser (>0.13)", "nbsphinx", "sphinx (>=4)", "sphinx-book-theme (>=0.0.42)", "sphinx-copybutton", "sphinx-math-dollar", "sympy"]
+numba = ["numba (>=0.57) ; python_version < \"3.14\""]
+sympy = ["sympy"]
+test = ["nox", "papermill (>=2.4)", "pytest (>=6)", "pytest-cov (>=3)", "pytest-doctestplus"]
+test-extras = ["dask-awkward", "spark-parser", "uncompyle6 ; python_version == \"3.8\""]
+
+[[package]]
 name = "watchfiles"
 version = "1.1.0"
 description = "Simple, modern and high performance file watching and code reload in python."
@@ -2553,4 +2593,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "6c8f813285059d8c2756bca208202d0859b58e9a596e60d9bca68471b486ac4c"
+content-hash = "68e62283711390a7534dc6faaa54616ea8f64f13d52b474598c9bde58f3521ec"

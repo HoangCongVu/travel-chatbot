@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from db import Base
 from pydantic import BaseModel, ConfigDict
+from pgvector.sqlalchemy import Vector
 
 
 class TourTable(Base):
@@ -13,14 +14,15 @@ class TourTable(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     tour_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    tour_type_id: Mapped[int] = mapped_column(nullable=False)
+    tour_type_id: Mapped[int] = mapped_column(ForeignKey("tour_types.id"), nullable=False)
     days: Mapped[int] = mapped_column(nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     highlight: Mapped[str] = mapped_column(Text, nullable=False)
     itinerary_url: Mapped[str] = mapped_column(Text, nullable=False)
     detail_url: Mapped[str] = mapped_column(Text, nullable=False)
     promotion_info: Mapped[str] = mapped_column(Text, nullable=False)
-    price_type: Mapped[str] = mapped_column(Text, nullable=False)
+    price_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    tour_embedding_vector: Mapped[list[float]] = mapped_column(Vector(1536), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -29,7 +31,6 @@ class TourTable(Base):
     )
 
 
-# Pydantic read model
 class TourModel(BaseModel):
     id: uuid.UUID
     tour_name: str
@@ -41,13 +42,10 @@ class TourModel(BaseModel):
     detail_url: str
     promotion_info: str
     price_type: str
-    model_config = {
-        "from_attributes": True,
-        "arbitrary_types_allowed": True,
-    }
+    tour_embedding_vector: Optional[list[float]] = None
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
-# Pydantic create model
 class TourCreateModel(BaseModel):
     tour_name: str
     tour_type_id: int
@@ -59,7 +57,7 @@ class TourCreateModel(BaseModel):
     promotion_info: str
     price_type: str
 
-# Pydantic update model
+
 class TourUpdateModel(BaseModel):
     tour_name: Optional[str] = None
     tour_type_id: Optional[int] = None
@@ -70,3 +68,16 @@ class TourUpdateModel(BaseModel):
     detail_url: Optional[str] = None
     promotion_info: Optional[str] = None
     price_type: Optional[str] = None
+
+class SearchTour(BaseModel):
+    id: uuid.UUID
+    tour_name: str
+    days: int
+    description: str
+    highlight: str
+    itinerary_url: str = None
+    detail_url: str = None
+    promotion_info: str = None
+    price_type: str
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+    
