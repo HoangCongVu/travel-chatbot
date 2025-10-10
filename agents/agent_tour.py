@@ -28,7 +28,7 @@ Nhiệm vụ:
       "itinerary_url": "string",
       "detail_url": "string",
       "promotion_info": "string",
-      "price_type": "string",   # "Cố định" | "Dựa trên ngày tháng" | "Dựa trên gói" | "Theo yêu cầu"
+      "price_type": "string",   # "Cố định" | "Dựa trên ngày khởi hành" | "Dựa trên gói" | "Theo yêu cầu"
       "tour_type_id": integer,
       "tour_type": {
         "tour_type_id": integer,
@@ -98,63 +98,73 @@ Quy tắc chi tiết:
    - Gom tất cả điểm nổi bật được liệt kê (nếu có).
    - Nếu không có thì để "".
 
-7. departures:
+7. promotion_info:
+   - Nếu văn bản có thông tin khuyến mãi, giảm giá, quà tặng, voucher, hoặc ưu đãi đặc biệt → ghi lại nguyên văn ngắn gọn.
+   - Nếu không có thông tin khuyến mãi → để "".
+
+8. departures:
    - Chỉ liệt kê nơi khởi hành (Hà Nội, TP.HCM, Đà Nẵng...).
    - Nếu không có, để mảng rỗng [].
 
-8. destinations:
+9. destinations:
    - Liệt kê các tỉnh/thành phố chính mà tour đi qua.
    - Không bao gồm các điểm tham quan nhỏ.
 
-9. highlight_locations:
+10. highlight_locations:
    - Liệt kê các điểm tham quan cụ thể, nổi bật (đảo, đèo, công viên...).
 
-10. departure_schedules:
+11. departure_schedules:
    - Nếu recurring → có start_date, end_date, weekdays.
    - Nếu specific → chỉ có specific_dates.
    - Nếu văn bản có cả recurring và specific → tạo 2 object riêng biệt trong mảng.
    - Không được trộn cả recurring và specific trong cùng 1 object.
+   - Nếu không có lịch khởi hành → để Cố định.
 
-11. Giá & price_type:
-   - Nếu tour chỉ có 1 giá duy nhất → 
-     price_type = "Cố định".
-   - Nếu giá thay đổi theo **ngày cụ thể** → 
-     price_type = "Dựa trên ngày tháng", điền vào "price_by_dates" dạng {"date": "YYYY-MM-DD", "price": float}.
-   - Nếu giá thay đổi theo **gói dịch vụ** → 
-     price_type = "Dựa trên gói", điền vào "price_by_packages" dạng {"package_name": "string", "price": float}.
-   - Nếu tour không công bố giá, chỉ ghi "Liên hệ" hoặc "theo yêu cầu" → 
-     price_type = "Theo yêu cầu", không hiển thị price.
-   - Luôn convert giá thành float (bỏ ký hiệu VNĐ, dấu . hoặc , phân cách).
-
-12. Giá (price):
-   - Luôn float (dù là số nguyên).
-   - Bỏ dấu phẩy, dấu chấm ngăn cách hàng nghìn, chữ VNĐ hoặc đơn vị tiền.
-   - Ví dụ: "12,500,000 VNĐ" → 12500000.0
-
-13. Visa prices:
-   - Nếu có giá visa riêng → thêm vào.
-   - Nếu chỉ ghi "bao gồm visa" thì bỏ qua.
-
-14. Price by packages:
-   - Nếu giá theo mùa hoặc theo gói → package_name chính xác như trong văn bản.
-   - Object: {"package_name": "string", "price": <float>}.
-
-15. Price by dates:
-   - Nếu văn bản có ngày cụ thể kèm giá → đưa vào đây.
-   - Date phải đúng format YYYY-MM-DD.
-   - Không được suy diễn ngày.
-
-16. recurrence_type: 
+12. recurrence_type: 
      - "daily": hàng ngày
      - "weekly": hàng tuần
      - "monthly": hàng tháng
      - "yearly": hàng năm
-17. Không được thêm dữ liệu ngoài văn bản (ngoại trừ số ngày từ "X ngày Y đêm").
 
-18. JSON trả về phải duy nhất, hợp lệ, không markdown, không văn bản thừa.
+13. Giá & price_type:
+   - Nếu tour chỉ có 1 mức giá duy nhất → 
+     price_type = "Cố định", điền giá vào "price_by_packages" với package_name = "Cố định".
+   - Nếu giá thay đổi theo ngày cụ thể → 
+     price_type = "Dựa trên ngày khởi hành", điền vào "price_by_dates" dạng {"date": "YYYY-MM-DD", "price": number}.
+   - Nếu giá thay đổi theo gói (ví dụ: gói tiêu chuẩn, gói cao cấp, mùa thấp điểm, mùa cao điểm...) → 
+     price_type = "Dựa trên gói", điền vào "price_by_packages" dạng {"package_name": "string", "price": number}.
+   - Nếu không công bố giá (ghi “Liên hệ” hoặc “theo yêu cầu”) → 
+     price_type = "Theo yêu cầu", các mảng giá để trống.
+   - Luôn convert giá thành **numeric integer**, bỏ dấu phẩy, dấu chấm, ký hiệu VNĐ.
+
+14. Giá (price):
+   - Luôn ở dạng numeric integer (không string, không float).
+   - Bỏ dấu phẩy, dấu chấm ngăn cách, ký hiệu VNĐ/đ.
+   - Ví dụ:
+     - "3,500,000 VNĐ" → 3500000
+     - "2.100.000 đ" → 2100000
+     - "12,500,000" → 12500000
+
+15. Visa prices:
+   - Nếu có giá visa riêng → thêm vào visa_prices, dạng {"price": number}.
+   - Nếu chỉ ghi "bao gồm visa" → bỏ qua.
+   - Nếu không có → để mảng rỗng.
+
+16. Price by packages:
+   - Nếu có nhiều mức giá theo gói/mùa → mỗi gói là 1 object {"package_name": "string", "price": number}.
+   - Nếu chỉ có 1 mức giá cố định → tạo 1 gói "Cố định".
+
+17. Price by dates:
+   - Chỉ thêm khi văn bản có ngày cụ thể kèm giá.
+   - Date đúng format YYYY-MM-DD.
+   - Không được suy diễn ngày nếu không có trong văn bản.
+
+18. Không được thêm dữ liệu ngoài văn bản (ngoại trừ số ngày từ "X ngày Y đêm").
+
+19. JSON trả về phải duy nhất, hợp lệ, không markdown, không văn bản thừa.
 """
 
-# Agent duy nhất
+
 agent_tour_all = AssistantAgent(
     name="tour_extractor",
     system_message=system_message,

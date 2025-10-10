@@ -1,19 +1,17 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 import os, json, dotenv, uuid
-from autogen import AssistantAgent
+from autogen import AssistantAgent, UserProxyAgent, GroupChat, GroupChatManager
 from repositories.message import MessageRepository
 from models.message import CreateMessagePayload
-from services.tour import TourService
-from services.tour_destination import TourDestinationService
+from services.chat_search import ChatSearchService
+from services.message import MessageService
 from datetime import datetime
-from db import Session
 
 dotenv.load_dotenv()
 
 router = APIRouter(prefix="/chat-bot", tags=["Chat Bot"])
 
-# Config cho LLM
 config_list = [
     {
         "model": "gpt-4o-mini",
@@ -21,168 +19,235 @@ config_list = [
     }
 ]
 
-# Schema ép model phải trả lời đúng format
-function_schema = {
-    "name": "chatbot_reply",
-    "description": "Trả lời câu hỏi của người dùng về tour",
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "response": {"type": "string"}
+tools_schema = [
+    {
+        "type": "function",
+        "function": {
+            "name": "search_tour_by_destination",
+            "description": "Sử dụng hàm này để tìm kiếm tour du lịch dựa vào một địa điểm hoặc tên tour, trả về tối đa 5 kết quả.",
+            "parameters": { 
+                "type": "object", 
+                "properties": { 
+                    "destination_text": { 
+                        "type": "string", 
+                        "description": "Tên địa điểm người dùng muốn tìm. Ví dụ: 'Đà Nẵng', 'Tour Singapore 3 ngày 2 đêm'"
+                    }
+                },
+                "required": ["destination_text"],
+            },
         },
-        "required": ["response"],
     },
-}
+]
 
-# Chatbot Agent
-agent = AssistantAgent(
-    name="TourAssistant",
-    system_message="""
-Bạn là trợ lý AI chuyên tư vấn tour du lịch.
-Bạn nhận được câu hỏi từ người dùng và thông tin từ database.
-- Nếu không liên quan du lịch: trả lời lịch sự, ngắn gọn.
-- Nếu liên quan: trả lời dựa trên thông tin có.
-- Nếu không tìm thấy thông tin: nói rằng không có dữ liệu.
-- Nếu người dùng hỏi về tour nhưng không khớp chính xác, hãy trả lời bằng tour gần nhất trong thông tin cung cấp.
-Không được trả lời "không có dữ liệu" nếu trong context có ít nhất một tour.
-Trả lời ngắn gọn, tiếng Việt.
-""",
-    llm_config={
-        "config_list": config_list,
-        "functions": [function_schema],
-    },
-)
-
-# Request model
 class ChatbotRequest(BaseModel):
     chat_id: uuid.UUID
     message: str
 
-
 @router.post("/")
 def chatbot_reply(request: ChatbotRequest):
-    user_message = {"role": "user", "content": request.message}
-
-    tour_detail = None
-    answer = "Xin lỗi, tôi chưa rõ ý bạn."
-
-    try:
-        # 1️⃣ Xác định intent: ngày hay điểm đến
-        target_date = None
-        for fmt in ("%d/%m/%Y", "%d/%m"):
-            try:
-                parsed_date = datetime.strptime(request.message, fmt).date()
-                if fmt == "%d/%m":
-                    parsed_date = parsed_date.replace(year=datetime.now().year)
-                target_date = parsed_date
-                break
-            except ValueError:
-                continue
-
-        if target_date:
-            # Người dùng hỏi theo ngày
-            tour_results = TourService.tour_by_date(target_date)
-            if tour_results:
-                # tour_results có thể là list → chỉ lấy name hoặc info cơ bản
-                tour_detail = [
-                    {"tour_name": t.tour_name} for t in tour_results
-                ]
-                answer = f"Tôi tìm thấy {len(tour_results)} tour khởi hành vào ngày {target_date.strftime('%d/%m/%Y')}."
-            else:
-                answer = f"Hiện chưa có tour nào khởi hành vào ngày {target_date.strftime('%d/%m/%Y')}."
-        else:
-            tour_detail = None  # reset trước khi check
-            # Người dùng hỏi theo điểm đến
-            destination_results = TourDestinationService.search_by_text(request.message, limit=3)
-            if destination_results:
-                # Lấy tour_id từ destination đầu tiên
-                tour_id = destination_results[0].tour_id
-                # Lấy chi tiết tour từ TourService
-                tour_obj = TourService.get(tour_id)
-                if tour_obj:
-                    # ⚠️ bỏ id, chỉ lấy thông tin cần cho user
-                    tour_detail = {
-                        "tour_name": tour_obj.tour_name,
-                    }
-                    answer = f"Tôi tìm thấy tour: {tour_obj.tour_name}"
+    user_message_content = request.message.strip()
+    
+    # === LẤY LỊCH SỬ CHAT GẦN NHẤT ===
+    def get_recent_chat_history(chat_id: uuid.UUID, limit: int = 6) -> list:
+        """Lấy 6 tin nhắn gần nhất để làm context cho agent"""
+        try:
+            recent_messages = MessageService.get_recent_messages(chat_id, limit)
+            
+            chat_history = []
+            for msg in reversed(recent_messages):  # Sắp xếp theo thời gian từ cũ đến mới
+                if msg.role == "user":
+                    chat_history.append({
+                        "role": "user", 
+                        "content": msg.content,
+                        "name": "User"
+                    })
                 else:
-                    tour_detail = None
-                    answer = "Xin lỗi, tôi không tìm thấy chi tiết tour."
-            else:
-                tour_detail = None
-                answer = "Xin lỗi, tôi không tìm thấy tour nào phù hợp."
-    except Exception as e:
-        print(f"⚠️ Intent detect error: {str(e)}")
+                    chat_history.append({
+                        "role": "assistant", 
+                        "content": msg.content,
+                        "name": "IntelligentCoordinator"
+                    })
+            
+            return chat_history
+        except Exception as e:
+            print(f"⚠️ Lỗi lấy lịch sử chat: {str(e)}")
+            return []
+    
+    # Lấy lịch sử chat
+    chat_history = get_recent_chat_history(request.chat_id, 6)
+    
+    # === THIẾT LẬP CÁC AGENT THÔNG MINH ===
 
-    # 2️⃣ Lấy lịch sử chat
+    # Agent thực thi
+    user_proxy = UserProxyAgent(
+        name="UserProxy",
+        human_input_mode="NEVER",
+        max_consecutive_auto_reply=3,
+        is_termination_msg=lambda x: "FINAL_ANSWER:" in x.get("content", ""),
+        code_execution_config=False,
+        system_message="Bạn chỉ thực thi function calls khi được yêu cầu và truyền kết quả cho agent tiếp theo."
+    )
+    
+    # Tạo context message từ lịch sử chat
+    context_message = ""
+    if chat_history:
+        context_message = "\n\n=== LỊCH SỬ CUỘC TRÒ CHUYỆN GẦN ĐÂY ===\n"
+        for msg in chat_history:
+            role = "Người dùng" if msg["role"] == "user" else "Tôi"
+            context_message += f"{role}: {msg['content']}\n"
+        context_message += "=== KẾT THÚC LỊCH SỬ ===\n\n"
+
+    # Agent phân tích và tìm kiếm thông minh
+    intelligent_coordinator = AssistantAgent(
+        name="IntelligentCoordinator",
+        system_message=f"""Bạn là trợ lý tư vấn tour du lịch thông minh với khả năng nhớ cuộc trò chuyện trước đó. 
+
+{context_message}
+**Nếu function search_tour_by_destination trả về danh sách trống hoặc không đúng địa điểm**, 
+hãy chuyển kết quả sang RecommendationAgent thay vì tự kết luận.
+
+**QUAN TRỌNG: Dựa vào lịch sử cuộc trò chuyện ở trên để hiểu ngữ cảnh và trả lời phù hợp!**
+
+Hãy phân tích tin nhắn người dùng và xử lý theo các tình huống:
+
+**TÌNH HUỐNG 1: Chào hỏi/Câu hỏi chung (không có context trước đó)**
+Nếu người dùng chỉ chào hỏi hoặc hỏi chung chung và chưa có lịch sử nói về tour cụ thể:
+- Chào lại thân thiện và hỏi họ muốn đi đâu
+- Luôn kết thúc phản hồi bằng dòng: "FINAL_ANSWER": <câu trả lời đầy đủ cho người dùng>
+- KHÔNG gọi tool search
+
+**TÌNH HUỐNG 2: Yêu cầu tìm tour cụ thể**
+Nếu người dùng đề cập địa điểm cụ thể:
+- Gọi function search_tour_by_destination
+- Chuyển kết quả cho RecommendationAgent
+
+**TÌNH HUỐNG 3: Hỏi chi tiết về tour đã được nhắc trước đó**
+Nếu người dùng hỏi "chi tiết", "thông tin thêm", "lịch trình" và trong lịch sử đã có tour cụ thể:
+- Tìm lại tour đó bằng cách gọi search với tên tour/địa điểm đã nhắc
+- Chuyển cho RecommendationAgent để phân tích chi tiết
+
+**TÌNH HUỐNG 4: Câu hỏi tiếp theo dựa trên context**
+Dựa vào lịch sử để hiểu người dùng đang hỏi về gì và trả lời phù hợp.
+
+Hãy phân tích kỹ lịch sử và tin nhắn hiện tại!""",
+        llm_config={"config_list": config_list, "tools": tools_schema},
+    )
+
+    # Agent chuyên gia khuyến nghị
+    recommendation_expert = AssistantAgent(
+        name="RecommendationAgent", 
+        system_message="""Bạn là chuyên gia tư vấn du lịch hàng đầu, có khả năng phân tích sâu sắc để tìm ra lựa chọn hoàn hảo cho khách hàng.
+
+**NHIỆM VỤ:**
+Nhiệm vụ của bạn là nhận một danh sách gồm tối đa 3 tour và yêu cầu ban đầu của người dùng. Bạn phải phân tích kỹ lưỡng để chọn ra MỘT tour DUY NHẤT tốt nhất và giải thích lý do một cách thuyết phục.
+
+**QUY TRÌNH SUY LUẬN BẮT BUỘC:**
+1.  **Phân tích yêu cầu người dùng:** Đọc lại thật kỹ yêu cầu của người dùng. Họ đang tìm kiếm điều gì? (ví dụ: giá rẻ, nghỉ dưỡng, khám phá, đi với gia đình, ít ngày,...). Ghi nhận những tiêu chí quan trọng nhất.
+2.  **So sánh các lựa chọn:** Đối chiếu danh sách tour nhận được với các tiêu chí của người dùng. Tour nào đáp ứng tốt nhất? Tour nào có ưu/nhược điểm gì so với các tour còn lại?
+3.  **Đưa ra lựa chọn và lý do:** Chọn ra 1 tour TỐT NHẤT. Phần quan trọng nhất là bạn phải **giải thích được TẠI SAO bạn chọn tour này mà KHÔNG PHẢI các tour kia**. Ví dụ: "Mặc dù tour X có giá rẻ hơn, nhưng tôi đề xuất tour Y vì lịch trình thoải mái, phù hợp hơn với nhu cầu nghỉ dưỡng của bạn."
+
+**FORMAT TRẢ LỜI:**
+-   Giới thiệu tour được chọn (tên, giá, thời gian).
+-   **Lý do lựa chọn (Quan trọng nhất):** Giải thích rõ ràng tại sao tour này là phương án tối ưu nhất dựa trên phân tích ở trên.
+-   Mô tả ngắn gọn lịch trình.
+-   Lời khuyên/gợi ý thêm.
+
+**Luôn kết thúc phản hồi bằng dòng: "FINAL_ANSWER": <câu trả lời đầy đủ cho người dùng>**
+**LƯU Ý:** Bạn KHÔNG được sử dụng tools, chỉ phân tích dữ liệu nhận được.""",
+        llm_config={"config_list": config_list},  # Không có tools
+    )
+
+    # === ĐĂNG KÝ FUNCTION VÀ THIẾT LẬP GROUPCHAT ===
+    
+    user_proxy.register_function(
+        function_map={
+            "search_tour_by_destination": ChatSearchService.search_tour_by_destination
+        }
+    )
+
+    # Tạo GroupChat với lịch sử
+    groupchat = GroupChat(
+        agents=[user_proxy, intelligent_coordinator, recommendation_expert], 
+        messages=chat_history,  # Load lịch sử vào GroupChat
+        max_round=8,
+        speaker_selection_method="round_robin",
+    )
+    
+    manager = GroupChatManager(
+        groupchat=groupchat,
+        llm_config={"config_list": config_list},
+        is_termination_msg=lambda x: "FINAL_ANSWER:" in x.get("content", ""),
+    )
+
+    # === BẮT ĐẦU CUỘC TRÒ CHUYỆN ===
+    
     try:
-        chat_history_objs = MessageRepository.get_recent_messages(
-            chat_id=request.chat_id, limit=10
+        user_proxy.initiate_chat(
+            manager,
+            message=user_message_content,
         )
-        # Chuyển sang dạng dict để agent hiểu
-        chat_history = [{"role": msg.role, "content": msg.content} for msg in chat_history_objs]
-    except Exception as e:
-        print(f"⚠️ Lỗi lấy chat history: {str(e)}")
-        chat_history = []
+        
+        # Trích xuất kết quả cuối cùng
+        final_answer = "Xin lỗi, đã có lỗi xảy ra trong quá trình xử lý."
+        tour_detail = None
 
-    # 3️⃣ Ghép context cho agent
-    messages_to_agent = []
-    if tour_detail:
-        messages_to_agent.append(
-            {
-                "role": "system",
-                "content": f"Thông tin tour: {json.dumps(tour_detail, ensure_ascii=False)}"
-            }
-        )
-    messages_to_agent.extend(chat_history)
-    messages_to_agent.append(user_message)
-
-    # 4️⃣ Gọi agent để refine câu trả lời
-    try:
-        result = agent.generate_reply(messages=messages_to_agent)
-        if isinstance(result, dict) and result.get("function_call"):
-            args = result["function_call"].get("arguments")
-            if args:
+        # Tìm FINAL_ANSWER từ bất kỳ agent nào
+        chat_messages = groupchat.messages
+        for msg in reversed(chat_messages):
+            content = msg.get("content", "")
+            if "FINAL_ANSWER:" in content:
+                final_answer = content.split("FINAL_ANSWER:")[1].strip()
+                break
+                
+        # Tìm kết quả tool call để trả về tour_detail
+        for msg in reversed(chat_messages):
+            if msg.get("role") == "tool":
                 try:
-                    response_json = json.loads(args)
-                    answer = response_json.get("response", answer)
-                except Exception as e:
-                    print(f"⚠️ Parse JSON fail: {str(e)}")
-        else:
-            answer = str(result)
+                    tool_content = json.loads(msg.get("content", "{}"))
+                    if "tours" in tool_content:
+                        tour_detail = tool_content["tours"]
+                        break
+                except (json.JSONDecodeError, Exception):
+                    continue
+
+        # Lưu tin nhắn vào database
+        MessageService.create_message(CreateMessagePayload(
+            chat_id=request.chat_id, 
+            content=user_message_content, 
+            role="user"
+        ))
+        MessageService.create_message(CreateMessagePayload(
+            chat_id=request.chat_id, 
+            content=final_answer, 
+            role="assistant"
+        ))
+
+        return {
+            # "status": "success",
+            "reply": final_answer,
+            # "tour_detail": tour_detail 
+        }
+        
     except Exception as e:
-        print(f"⚠️ Lỗi gọi agent: {str(e)}")
-
-    # 5️⃣ Fallback: nếu agent trả lời "không có dữ liệu" nhưng thực tế có tour
-    if tour_detail and "không có dữ liệu" in answer.lower():
-        if isinstance(tour_detail, list) and len(tour_detail) > 0:
-            answer = f"Tôi tìm thấy tour: {tour_detail[0].get('tour_name')}"
-        elif isinstance(tour_detail, dict):
-            answer = f"Tôi tìm thấy tour: {tour_detail.get('tour_name')}"
-
-    # 6️⃣ Lưu message user
-    try:
-        MessageRepository.create(
-            CreateMessagePayload(
-                chat_id=request.chat_id, content=request.message, role="user"
-            )
-        )
-    except Exception as e:
-        print(f"⚠️ Lỗi lưu tin nhắn user: {str(e)}")
-
-    # 7️⃣ Lưu message assistant
-    try:
-        MessageRepository.create(
-            CreateMessagePayload(
-                chat_id=request.chat_id, content=answer, role="assistant"
-            )
-        )
-    except Exception as e:
-        print(f"⚠️ Lỗi lưu tin nhắn assistant: {str(e)}")
-
-    # 8️⃣ Trả về kết quả
-    return {
-        "status": "success",
-        "reply": answer,
-        "tour_detail": tour_detail
-    }
+        print(f"⚠️ Lỗi trong quá trình xử lý: {str(e)}")
+        error_message = "Xin lỗi, hệ thống đang gặp sự cố. Vui lòng thử lại sau."
+        
+        try:
+            MessageService.create_message(CreateMessagePayload(
+                chat_id=request.chat_id, 
+                content=user_message_content, 
+                role="user"
+            ))
+            MessageService.create_message(CreateMessagePayload(
+                chat_id=request.chat_id, 
+                content=error_message, 
+                role="assistant"
+            ))
+        except Exception as db_error:
+            print(f"⚠️ Lỗi lưu tin nhắn: {str(db_error)}")
+            
+        return {
+            "status": "error",
+            "reply": error_message,
+            # "tour_detail": None
+        }

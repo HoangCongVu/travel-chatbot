@@ -36,3 +36,12 @@ class UserCreateModel(BaseModel):
     email: str
     password: str
     model_config = ConfigDict(from_attributes=True)
+
+class UserLoginModel(BaseModel):
+    email: str
+    password: str
+
+class UserLoginResponse(BaseModel):
+    user: UserModel
+    # access_token: str  # Nếu bạn sử dụng JWT
+    message: str

@@ -1,9 +1,13 @@
 import uuid
 from fastapi import APIRouter
-from models.user import UserCreateModel, UserModel
+from models.user import UserCreateModel, UserModel, UserLoginModel, UserLoginResponse
 from services.user import UserService 
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+@router.post("/login", response_model=UserLoginResponse)
+def login_user(login_data: UserLoginModel):
+    return UserService.login(login_data.email, login_data.password)
 
 @router.post("/", response_model=UserModel)
 def create_user(user: UserCreateModel):
@@ -24,3 +28,4 @@ def delete_user(user_id: uuid.UUID):
 @router.get("/", response_model=list[UserModel])
 def get_all_user():
     return UserService.get_all_user()
+
