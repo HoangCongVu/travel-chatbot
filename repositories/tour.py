@@ -61,7 +61,7 @@ class TourRepository:
         with Session() as session:
             rows = session.execute(
                 sa.text("""
-                    SELECT id, tour_name, days, description, highlight, itinerary_url, detail_url, promotion_info, price_type
+                    SELECT id, tour_name, days, description, highlight, itinerary_url, image_url, promotion_info, price_type
                     FROM tours
                     ORDER BY tour_embedding_vector <-> (:query_vector)::vector
                     LIMIT :limit

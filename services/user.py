@@ -30,9 +30,7 @@ class UserService():
         existing_user = UserRespository.get_by_email(payload.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
-        
-        # Tạo user mới
-        return UserRespository.create(payload)
+        return user
     
     @staticmethod
     def login(email: str, password: str) -> UserLoginResponse:

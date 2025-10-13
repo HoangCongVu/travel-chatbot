@@ -1,10 +1,13 @@
 import uuid
 from fastapi import APIRouter, HTTPException
-from models.admin import CreateAdminModel, UpdateAdminModel, AdminModel
+from models.admin import CreateAdminModel, UpdateAdminModel, AdminModel, AdminLoginModel, AdminLoginResponse
 from services.admin import AdminService
 
 router = APIRouter(prefix="/admins", tags=["Admins"])
 
+@router.post("/login", response_model=AdminLoginResponse)
+def login_admin(login_data: AdminLoginModel):
+    return AdminService.login(login_data.email, login_data.password)
 
 @router.post("", response_model=AdminModel)
 def create_admin(payload: CreateAdminModel):

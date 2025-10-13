@@ -1,6 +1,7 @@
 import uuid
 from repositories.admin import AdminRepositories
-from models.admin import CreateAdminModel, UpdateAdminModel, AdminModel
+from models.admin import CreateAdminModel, UpdateAdminModel, AdminModel, AdminLoginModel, AdminLoginResponse
+from fastapi import HTTPException
 
 
 class AdminService:
@@ -23,3 +24,21 @@ class AdminService:
     @staticmethod
     def delete(admin_id: uuid.UUID) -> bool:
         return AdminRepositories.delete(admin_id)
+
+    @staticmethod
+    def get_by_email(payload: AdminLoginModel) -> AdminModel:
+        # Kiểm tra email đã tồn tại
+        existing_admin = AdminRepositories.get_by_email(payload.email)
+        if existing_admin:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        return admin
+
+    @staticmethod
+    def login(email: str, password: str) -> AdminLoginResponse:
+        # Kiểm tra thông tin đăng nhập
+        admin = AdminRepositories.login(email, password)
+        if not admin:
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Bỏ các kiểm tra thuộc tính không tồn tại
+        return AdminLoginResponse(admin=admin, message="Login successful")

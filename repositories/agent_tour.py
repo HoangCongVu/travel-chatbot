@@ -67,7 +67,7 @@ class AgentTourRepository:
                     "description": tour.get("description", ""),
                     "highlight": tour.get("highlight", ""),
                     "itinerary_url": tour.get("itinerary_url", ""),
-                    "detail_url": tour.get("detail_url", ""),
+                    "image_url": tour.get("image_url", ""),
                     "promotion_info": tour.get("promotion_info", ""),
                     "price_type": tour.get("price_type", "Một giá"),
                     "tour_type_id": tour_type.id,

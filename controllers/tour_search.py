@@ -65,3 +65,19 @@ def search_tours_by_price(
         "total_results": len(results),
         "data": results
     }
+
+@router.get("/all/")
+def get_all_tours():
+    """
+    Lấy tất cả tour có sẵn
+    """
+    results = TourSearchService.get_all_tours()
+
+    if not results or not results.get("tours"):
+        raise HTTPException(status_code=404, detail="Không có tour nào")
+
+    return {
+        "status": "success",
+        "total_results": len(results["tours"]),
+        "data": results
+    }

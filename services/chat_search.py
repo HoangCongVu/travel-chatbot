@@ -61,7 +61,7 @@ class ChatSearchService:
             "description": tour.description,
             "highlight": tour.highlight,
             "itinerary_url": tour.itinerary_url,
-            "detail_url": tour.detail_url,
+            "image_url": tour.image_url,
             "promotion_info": tour.promotion_info,
             "price_type": tour.price_type,
             "departures": departures,

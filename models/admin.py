@@ -49,3 +49,12 @@ class AdminModel(BaseModel):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+class AdminLoginModel(BaseModel):
+    email: str
+    password: str
+
+class AdminLoginResponse(BaseModel):
+    admin: AdminModel
+    # access_token: str  # Nếu bạn sử dụng JWT
+    message: str

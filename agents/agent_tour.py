@@ -26,7 +26,7 @@ Nhiệm vụ:
       "description": "string",
       "highlight": "string",
       "itinerary_url": "string",
-      "detail_url": "string",
+      "image_url": "string",
       "promotion_info": "string",
       "price_type": "string",   # "Cố định" | "Dựa trên ngày khởi hành" | "Dựa trên gói" | "Theo yêu cầu"
       "tour_type_id": integer,

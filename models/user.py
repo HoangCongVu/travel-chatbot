@@ -27,8 +27,9 @@ class UserModel(BaseModel):
     full_name: str
     phone_number: str
     email: str
-    password: str
+    # password: str
     model_config = ConfigDict(from_attributes=True)
+    created_at: datetime
     
 class UserCreateModel(BaseModel):
     full_name: str

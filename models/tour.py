@@ -19,7 +19,7 @@ class TourTable(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     highlight: Mapped[str] = mapped_column(Text, nullable=False)
     itinerary_url: Mapped[str] = mapped_column(Text, nullable=False)
-    detail_url: Mapped[str] = mapped_column(Text, nullable=False)
+    image_url: Mapped[str] = mapped_column(Text, nullable=False)
     promotion_info: Mapped[str] = mapped_column(Text, nullable=False)
     price_type: Mapped[str] = mapped_column(String(50), nullable=False)
     tour_embedding_vector: Mapped[list[float]] = mapped_column(Vector(1536), nullable=True)
@@ -39,10 +39,10 @@ class TourModel(BaseModel):
     description: str
     highlight: str
     itinerary_url: str
-    detail_url: str
+    image_url: str
     promotion_info: str
     price_type: str
-    tour_embedding_vector: Optional[list[float]] = None
+    # tour_embedding_vector: Optional[list[float]] = None
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
 
 
@@ -53,7 +53,7 @@ class TourCreateModel(BaseModel):
     description: str
     highlight: str
     itinerary_url: str
-    detail_url: str
+    image_url: str
     promotion_info: str
     price_type: str
 
@@ -65,7 +65,7 @@ class TourUpdateModel(BaseModel):
     description: Optional[str] = None
     highlight: Optional[str] = None
     itinerary_url: Optional[str] = None
-    detail_url: Optional[str] = None
+    image_url: Optional[str] = None
     promotion_info: Optional[str] = None
     price_type: Optional[str] = None
 
@@ -76,7 +76,7 @@ class SearchTour(BaseModel):
     description: str
     highlight: str
     itinerary_url: str = None
-    detail_url: str = None
+    image_url: str = None
     promotion_info: str = None
     price_type: str
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
