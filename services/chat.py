@@ -6,6 +6,11 @@ from repositories.chat import ChatRepository
 class ChatService:
     @staticmethod
     def create_chat(payload: CreateChatPayload) -> ChatModel:
+        """
+        ✅ Tạo chat mới
+        - Nếu user_id có → gắn với tài khoản
+        - Nếu không có → tạo chat ẩn danh với session_id
+        """
         return ChatRepository.create(payload)
 
     @staticmethod

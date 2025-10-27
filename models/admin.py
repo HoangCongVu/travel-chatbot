@@ -55,6 +55,5 @@ class AdminLoginModel(BaseModel):
     password: str
 
 class AdminLoginResponse(BaseModel):
-    admin: AdminModel
-    # access_token: str  # Nếu bạn sử dụng JWT
-    message: str
+    access_token: str
+    token_type: str = "bearer"

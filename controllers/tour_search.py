@@ -66,7 +66,7 @@ def search_tours_by_price(
         "data": results
     }
 
-@router.get("/all/")
+@router.get("/tourpage/")
 def get_all_tours():
     """
     Lấy tất cả tour có sẵn

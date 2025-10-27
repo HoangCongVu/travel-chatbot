@@ -9,7 +9,11 @@ from models.departure_schedule import DepartureSchedule
 from models.specific_departure import SpecificDeparture
 from models.recurring_schedule import RecurringSchedule
 from models.price_by_date import PriceByDate
-
+from models.visa_price import VisaPriceTable
+from models.tour_highlight_location import TourHighlightLocation
+from models.tour_destination import TourDestination
+from models.tour_departure import TourDeparture
+from models.price_by_package import PriceByPackage
 class TourRepository:
     @staticmethod
     def create(payload: TourCreateModel) -> TourModel:
@@ -45,6 +49,75 @@ class TourRepository:
             tour = session.query(TourTable).filter(TourTable.id == tour_id).first()
             if not tour:
                 return False
+            session.delete(tour)
+            session.commit()
+            return True
+    
+    @staticmethod
+    def delete_with_related(tour_id: uuid.UUID) -> bool:
+        """
+        Xóa tour và tất cả các bảng liên quan:
+        - departure_schedules (và cascade: specific_departures, recurring_schedules)
+        - visa_prices
+        - tour_highlight_locations
+        - tour_destinations
+        - tour_departures
+        - price_by_packages
+        - price_by_dates
+        """
+        with Session() as session:
+            tour = session.query(TourTable).filter(TourTable.id == tour_id).first()
+            if not tour:
+                return False
+            
+            # Lấy danh sách departure_schedules của tour
+            departure_schedules = session.query(DepartureSchedule).filter(
+                DepartureSchedule.tour_id == tour_id
+            ).all()
+            
+            schedule_ids = [schedule.id for schedule in departure_schedules]
+            
+            # Xóa specific_departures và recurring_schedules liên quan đến departure_schedules
+            if schedule_ids:
+                session.query(SpecificDeparture).filter(
+                    SpecificDeparture.schedule_id.in_(schedule_ids)
+                ).delete(synchronize_session=False)
+                
+                session.query(RecurringSchedule).filter(
+                    RecurringSchedule.schedule_id.in_(schedule_ids)
+                ).delete(synchronize_session=False)
+            
+            # Xóa departure_schedules
+            session.query(DepartureSchedule).filter(
+                DepartureSchedule.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            # Xóa các bảng khác liên quan trực tiếp đến tour_id
+            session.query(VisaPriceTable).filter(
+                VisaPriceTable.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            session.query(TourHighlightLocation).filter(
+                TourHighlightLocation.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            session.query(TourDestination).filter(
+                TourDestination.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            session.query(TourDeparture).filter(
+                TourDeparture.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            session.query(PriceByPackage).filter(
+                PriceByPackage.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            session.query(PriceByDate).filter(
+                PriceByDate.tour_id == tour_id
+            ).delete(synchronize_session=False)
+            
+            # Cuối cùng xóa tour
             session.delete(tour)
             session.commit()
             return True

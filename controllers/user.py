@@ -7,9 +7,9 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.post("/login", response_model=UserLoginResponse)
 def login_user(login_data: UserLoginModel):
-    return UserService.login(login_data.email, login_data.password)
+    return UserService.login(login_data)
 
-@router.post("/", response_model=UserModel)
+@router.post("/create", response_model=UserModel)
 def create_user(user: UserCreateModel):
     return UserService.create_user(user)
 

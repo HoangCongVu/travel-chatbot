@@ -99,37 +99,34 @@ def chatbot_reply(request: ChatbotRequest):
 
     # Agent phân tích và tìm kiếm thông minh
     intelligent_coordinator = AssistantAgent(
-        name="IntelligentCoordinator",
-        system_message=f"""Bạn là trợ lý tư vấn tour du lịch thông minh với khả năng nhớ cuộc trò chuyện trước đó. 
+            name="IntelligentCoordinator",
+            system_message=f"""Bạn là trợ lý điều phối thông minh. NHIỆM VỤ CỦA BẠN LÀ PHÂN TÍCH VÀ QUYẾT ĐỊNH HÀNH ĐỘNG, KHÔNG PHẢI LÀ NGƯỜI TRẢ LỜI CUỐI CÙNG (trừ khi chào hỏi).
 
 {context_message}
-**Nếu function search_tour_by_destination trả về danh sách trống hoặc không đúng địa điểm**, 
-hãy chuyển kết quả sang RecommendationAgent thay vì tự kết luận.
-
-**QUAN TRỌNG: Dựa vào lịch sử cuộc trò chuyện ở trên để hiểu ngữ cảnh và trả lời phù hợp!**
+**QUAN TRỌNG: Dựa vào lịch sử cuộc trò chuyện ở trên để hiểu ngữ cảnh!**
 
 Hãy phân tích tin nhắn người dùng và xử lý theo các tình huống:
 
-**TÌNH HUỐNG 1: Chào hỏi/Câu hỏi chung (không có context trước đó)**
-Nếu người dùng chỉ chào hỏi hoặc hỏi chung chung và chưa có lịch sử nói về tour cụ thể:
-- Chào lại thân thiện và hỏi họ muốn đi đâu
+**TÌNH HUỐNG 1: Chào hỏi đơn thuần (không có context trước đó)**
+- Nếu người dùng chỉ chào hỏi (ví dụ: "Chào", "Hi"):
+- Chào lại thân thiện và hỏi họ muốn đi đâu.
 - Luôn kết thúc phản hồi bằng dòng: "FINAL_ANSWER": <câu trả lời đầy đủ cho người dùng>
-- KHÔNG gọi tool search
+- KHÔNG gọi tool search.
 
 **TÌNH HUỐNG 2: Yêu cầu tìm tour cụ thể**
-Nếu người dùng đề cập địa điểm cụ thể:
-- Gọi function search_tour_by_destination
-- Chuyển kết quả cho RecommendationAgent
+- Nếu người dùng đề cập địa điểm cụ thể (ví dụ: "tìm tour Đà Nẵng"):
+- Gọi function search_tour_by_destination.
+- **Sau khi có kết quả, hãy chuyển toàn bộ kết quả cho RecommendationAgent.**
+- KHÔNG được dùng FINAL_ANSWER.
 
-**TÌNH HUỐNG 3: Hỏi chi tiết về tour đã được nhắc trước đó**
-Nếu người dùng hỏi "chi tiết", "thông tin thêm", "lịch trình" và trong lịch sử đã có tour cụ thể:
-- Tìm lại tour đó bằng cách gọi search với tên tour/địa điểm đã nhắc
-- Chuyển cho RecommendationAgent để phân tích chi tiết
+**TÌNH HUỐNG 3: Câu hỏi chi tiết/Câu hỏi tiếp theo (CÓ CONTEXT)**
+- Nếu người dùng hỏi chi tiết (ví dụ: "giá bao nhiêu", "khởi hành ở đâu", "lịch trình", "có tour X không") VÀ lịch sử chat đã có thông tin:
+- **Nhiệm vụ của bạn là chuyển tiếp (forward) câu hỏi này và LỊCH SỬ GẦN NHẤT cho RecommendationAgent để trả lời.**
+- (Ví dụ: "RecommendationAgent, người dùng đang hỏi về địa điểm khởi hành của tour chúng ta vừa nói. Hãy trả lời họ.")
+- KHÔNG được dùng FINAL_ANSWER.
 
-**TÌNH HUỐNG 4: Câu hỏi tiếp theo dựa trên context**
-Dựa vào lịch sử để hiểu người dùng đang hỏi về gì và trả lời phù hợp.
-
-Hãy phân tích kỹ lịch sử và tin nhắn hiện tại!""",
+**Tóm lại: Bạn chỉ được dùng FINAL_ANSWER cho TÌNH HUỐNG 1. Mọi thứ khác liên quan đến tour (tìm kiếm, hỏi chi tiết) đều phải được chuyển cho RecommendationAgent.**
+""",
         llm_config={"config_list": config_list, "tools": tools_schema},
     )
 
@@ -170,7 +167,7 @@ Nhiệm vụ của bạn là nhận một danh sách gồm tối đa 3 tour và 
         agents=[user_proxy, intelligent_coordinator, recommendation_expert], 
         messages=chat_history,  # Load lịch sử vào GroupChat
         max_round=8,
-        speaker_selection_method="round_robin",
+        speaker_selection_method="auto",
     )
     
     manager = GroupChatManager(

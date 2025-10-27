@@ -1,23 +1,48 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from models.chat import CreateChatPayload, UpdateChatPayload, ChatModel
 from services.chat import ChatService
 from pydantic import BaseModel
 import uuid
+from uuid import uuid4, UUID
+from middleware.auth import get_current_user
 
 router = APIRouter(prefix="/chats", tags=["Chats"])
 
-# Payload đơn giản hơn cho việc tạo chat
-class SimpleChatPayload(BaseModel):
-    user_id: uuid.UUID
+# Payload tạo chat
+class ChatPayload(BaseModel):
     title: str
 
-@router.post("/start-session", response_model=ChatModel)
-def start_chat_session(payload: SimpleChatPayload):
-    """Tạo chat session mới với session_id được tự động tạo"""
+# Payload khi tạo chat chưa đăng nhập (ẩn danh)
+# class AnonymousChatPayload(BaseModel):
+#     title: str
+
+@router.post("/userchat", response_model=ChatModel)
+def start_chat_session(
+    payload: ChatPayload,
+    current_user: str = Depends(get_current_user) 
+):
+    """
+    Tạo chat khi người dùng đã đăng nhập
+    """
+    # override payload.user_id bằng current_user từ token
     full_payload = CreateChatPayload(
-        user_id=payload.user_id,
+        user_id=current_user,           # lấy từ token, đảm bảo hợp lệ
         title=payload.title,
-        session_id=uuid.uuid4()  # Tự động tạo session_id
+        session_id=uuid4()              # tạo session mới
+    )
+    return ChatService.create_chat(full_payload)
+
+@router.post("/anonymouschat", response_model=ChatModel)
+def create_anonymous_chat(payload: ChatPayload):
+    """
+    Người dùng chưa đăng nhập vẫn có thể tạo chat
+    - Không có user_id
+    - Sinh session_id ngẫu nhiên
+    """
+    full_payload = CreateChatPayload(
+        user_id=None,
+        title=payload.title,
+        session_id=uuid.uuid4(),
     )
     return ChatService.create_chat(full_payload)
 

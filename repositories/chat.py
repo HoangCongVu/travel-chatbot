@@ -8,11 +8,20 @@ class ChatRepository:
     @staticmethod
     def create(payload: CreateChatPayload) -> ChatModel:
         with Session() as session:
-            # Tự động tạo session_id nếu không được cung cấp
             chat_data = payload.model_dump()
-            if not chat_data.get('session_id'):
-                chat_data['session_id'] = uuid.uuid4()
-            
+
+            # ✅ Nếu không có session_id, tự tạo
+            if not chat_data.get("session_id"):
+                chat_data["session_id"] = uuid.uuid4()
+
+            # ✅ Cho phép tạo chat khi chưa có user_id
+            if not chat_data.get("user_id"):
+                chat_data["user_id"] = None
+
+            # ✅ Nếu không có title, tạo mặc định
+            # if not chat_data.get("title"):
+            #     chat_data["title"] = "New Chat"
+
             chat = Chat(**chat_data)
             session.add(chat)
             session.commit()
@@ -40,10 +49,13 @@ class ChatRepository:
     @staticmethod
     def delete(chat_id: uuid.UUID):
         with Session() as session:
-            # Xóa tất cả message có chat_id này
+            # ✅ Xóa message trước
             session.query(Message).filter(Message.chat_id == chat_id).delete()
-            # Sau đó xóa chat
+
             chat = session.get(Chat, chat_id)
+            if not chat:
+                raise ValueError(f"Chat with ID {chat_id} not found")
+
             session.delete(chat)
             session.commit()
 
@@ -51,4 +63,13 @@ class ChatRepository:
     def get_all_chat_by_user(user_id: uuid.UUID) -> list[ChatModel]:
         with Session() as session:
             chats = session.query(Chat).filter(Chat.user_id == user_id).all()
+            return [ChatModel.model_validate(chat) for chat in chats]
+
+    @staticmethod
+    def get_all_chat_by_session(session_id: uuid.UUID) -> list[ChatModel]:
+        """
+        ✅ Lấy tất cả chat của người dùng chưa đăng nhập (dựa vào session_id)
+        """
+        with Session() as session:
+            chats = session.query(Chat).filter(Chat.session_id == session_id).all()
             return [ChatModel.model_validate(chat) for chat in chats]

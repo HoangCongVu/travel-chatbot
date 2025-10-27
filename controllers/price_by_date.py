@@ -6,7 +6,7 @@ from services.price_by_date import PriceByDateService
 router = APIRouter(prefix="/price-by-dates", tags=["Price By Dates"])
 
 
-@router.post("", response_model=PriceByDateModel)
+@router.post("/create", response_model=PriceByDateModel)
 def create_price(payload: CreatePriceByDate):
     return PriceByDateService.create(payload)
 
@@ -16,7 +16,7 @@ def get_price(price_id: uuid.UUID):
     return PriceByDateService.get(price_id)
 
 
-@router.put("", response_model=PriceByDateModel)
+@router.put("/update", response_model=PriceByDateModel)
 def update_price(price_id: uuid.UUID, payload: UpdatePriceByDate):
     return PriceByDateService.update(price_id, payload)
 

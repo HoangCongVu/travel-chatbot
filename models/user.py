@@ -43,6 +43,5 @@ class UserLoginModel(BaseModel):
     password: str
 
 class UserLoginResponse(BaseModel):
-    user: UserModel
-    # access_token: str  # Nếu bạn sử dụng JWT
-    message: str
+    access_token: str
+    token_type: str = "bearer"

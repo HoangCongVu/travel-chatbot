@@ -2,6 +2,9 @@ import uuid
 from models.user import UserCreateModel, UserModel, UserLoginModel, UserLoginResponse
 from fastapi import HTTPException
 from repositories.user import UserRespository
+import jwt
+import datetime
+from middleware.auth import SECRET_KEY, ALGORITHM
 
 class UserService():
     @staticmethod
@@ -30,14 +33,21 @@ class UserService():
         existing_user = UserRespository.get_by_email(payload.email)
         if existing_user:
             raise HTTPException(status_code=400, detail="Email already registered")
-        return user
+        return None
     
     @staticmethod
-    def login(email: str, password: str) -> UserLoginResponse:
-        # Kiểm tra thông tin đăng nhập
-        user = UserRespository.login(email, password)
+    def login(login_data: UserLoginModel) -> UserLoginResponse:
+        user = UserRespository.login(login_data.email, login_data.password)
         if not user:
             raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        payload = {
+            "sub": str(user.id),
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         
-        # Bỏ các kiểm tra thuộc tính không tồn tại
-        return UserLoginResponse(user=user, message="Login successful")
+        return UserLoginResponse(
+            access_token=token,
+            token_type="bearer"
+        )

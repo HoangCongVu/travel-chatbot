@@ -20,6 +20,13 @@ class TourService:
     @staticmethod
     def delete(tour_id: uuid.UUID) -> bool:
         return TourRepository.delete(tour_id)
+    
+    @staticmethod
+    def delete_with_related(tour_id: uuid.UUID) -> bool:
+        """
+        Xóa tour và tất cả các bảng liên quan.
+        """
+        return TourRepository.delete_with_related(tour_id)
 
     @staticmethod
     def get_all() -> list[TourModel]:

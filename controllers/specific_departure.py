@@ -7,7 +7,7 @@ from services.specific_departure import SpecificDepartureService
 router = APIRouter(prefix="/specific-departures", tags=["Specific Departures"])
 
 
-@router.post("", response_model=SpecificDepartureModel)
+@router.post("/create", response_model=SpecificDepartureModel)
 def create_departure(payload: CreateSpecificDeparture):
     return SpecificDepartureService.create(payload)
 
@@ -17,7 +17,7 @@ def get_departure(departure_id: uuid.UUID):
     return SpecificDepartureService.get(departure_id)
 
 
-@router.put("", response_model=SpecificDepartureModel)
+@router.put("/update", response_model=SpecificDepartureModel)
 def update_departure(departure_id: uuid.UUID, payload: UpdateSpecificDeparture):
     return SpecificDepartureService.update(departure_id, payload)
 

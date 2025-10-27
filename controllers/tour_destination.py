@@ -6,7 +6,7 @@ from services.tour_destination import TourDestinationService
 router = APIRouter(prefix="/tour-destinations", tags=["Tour Destinations"])
 
 
-@router.post("", response_model=TourDestinationModel)
+@router.post("/create", response_model=TourDestinationModel)
 def create_destination(payload: CreateTourDestination):
     return TourDestinationService.create(payload)
 
@@ -16,7 +16,7 @@ def get_destination(destination_id: uuid.UUID):
     return TourDestinationService.get(destination_id)
 
 
-@router.put("", response_model=TourDestinationModel)
+@router.put("/update", response_model=TourDestinationModel)
 def update_destination(destination_id: uuid.UUID, payload: UpdateTourDestination):
     return TourDestinationService.update(destination_id, payload)
 

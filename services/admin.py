@@ -2,6 +2,9 @@ import uuid
 from repositories.admin import AdminRepositories
 from models.admin import CreateAdminModel, UpdateAdminModel, AdminModel, AdminLoginModel, AdminLoginResponse
 from fastapi import HTTPException
+import jwt
+import datetime
+from middleware.auth import SECRET_KEY, ALGORITHM
 
 
 class AdminService:
@@ -31,14 +34,20 @@ class AdminService:
         existing_admin = AdminRepositories.get_by_email(payload.email)
         if existing_admin:
             raise HTTPException(status_code=400, detail="Email already registered")
-        return admin
+        return None
 
-    @staticmethod
-    def login(email: str, password: str) -> AdminLoginResponse:
-        # Kiểm tra thông tin đăng nhập
-        admin = AdminRepositories.login(email, password)
+    def login(login_data: AdminLoginModel) -> AdminLoginResponse:
+        admin = AdminRepositories.login(login_data.email, login_data.password)
         if not admin:
             raise HTTPException(status_code=401, detail="Invalid email or password")
+
+        payload = {
+            "sub": str(admin.id),
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=2)
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
         
-        # Bỏ các kiểm tra thuộc tính không tồn tại
-        return AdminLoginResponse(admin=admin, message="Login successful")
+        return AdminLoginResponse(
+            access_token=token,
+            token_type="bearer"
+        )

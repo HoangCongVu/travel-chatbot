@@ -24,7 +24,6 @@ class FileTable(Base):
 class UploadResultModel(BaseModel):
     url: str
     message: str
-
   
 class FileCreateModel(BaseModel):
     admin_id: uuid.UUID

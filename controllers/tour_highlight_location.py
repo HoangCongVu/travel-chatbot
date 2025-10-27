@@ -7,7 +7,7 @@ from services.tour_highlight_location import TourHighlightLocationService
 router = APIRouter(prefix="/tour-highlight-locations", tags=["Tour Highlight Locations"])
 
 
-@router.post("", response_model=TourHighlightLocationModel)
+@router.post("/create", response_model=TourHighlightLocationModel)
 def create_location(payload: CreateTourHighlightLocation):
     return TourHighlightLocationService.create(payload)
 
@@ -17,7 +17,7 @@ def get_location(location_id: uuid.UUID):
     return TourHighlightLocationService.get(location_id)
 
 
-@router.put("", response_model=TourHighlightLocationModel)
+@router.put("/update", response_model=TourHighlightLocationModel)
 def update_location(location_id: uuid.UUID, payload: UpdateTourHighlightLocation):
     return TourHighlightLocationService.update(location_id, payload)
 

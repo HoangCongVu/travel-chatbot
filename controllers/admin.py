@@ -7,10 +7,10 @@ router = APIRouter(prefix="/admins", tags=["Admins"])
 
 @router.post("/login", response_model=AdminLoginResponse)
 def login_admin(login_data: AdminLoginModel):
-    return AdminService.login(login_data.email, login_data.password)
+    return AdminService.login(login_data)
 
 @router.post("", response_model=AdminModel)
-def create_admin(payload: CreateAdminModel):
+def create_admin(payload: CreateAdminModel): 
     return AdminService.create(payload)
 
 

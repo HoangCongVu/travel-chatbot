@@ -7,7 +7,7 @@ from services.price_by_package import PriceByPackageService
 router = APIRouter(prefix="/price-by-packages", tags=["Price By Packages"])
 
 
-@router.post("", response_model=PriceByPackageModel)
+@router.post("/create", response_model=PriceByPackageModel)
 def create_price(payload: CreatePriceByPackage):
     return PriceByPackageService.create(payload)
 
@@ -17,7 +17,7 @@ def get_price(record_id: uuid.UUID):
     return PriceByPackageService.get(record_id)
 
 
-@router.put("", response_model=PriceByPackageModel)
+@router.put("/update", response_model=PriceByPackageModel)
 def update_price(record_id: uuid.UUID, payload: UpdatePriceByPackage):
     return PriceByPackageService.update(record_id, payload)
 

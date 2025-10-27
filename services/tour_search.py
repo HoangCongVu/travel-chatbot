@@ -336,6 +336,7 @@ class TourSearchService:
             ]
 
             tours.append({
+                "tour_id": tour.id,
                 "tour_name": tour.tour_name,
                 "days": tour.days,
                 "description": tour.description,

@@ -7,7 +7,7 @@ from services.recurring_schedule import RecurringScheduleService
 router = APIRouter(prefix="/recurring-schedules", tags=["Recurring Schedules"])
 
 
-@router.post("", response_model=RecurringScheduleModel)
+@router.post("/create", response_model=RecurringScheduleModel)
 def create_schedule(payload: CreateRecurringSchedule):
     return RecurringScheduleService.create(payload)
 
@@ -15,7 +15,7 @@ def create_schedule(payload: CreateRecurringSchedule):
 def get_schedule(schedule_id: uuid.UUID):
     return RecurringScheduleService.get(schedule_id)
 
-@router.put("", response_model=RecurringScheduleModel)
+@router.put("/update", response_model=RecurringScheduleModel)
 def update_schedule(schedule_id: uuid.UUID, payload: UpdateRecurringSchedule):
     return RecurringScheduleService.update(schedule_id, payload)
 
