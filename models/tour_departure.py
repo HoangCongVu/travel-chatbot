@@ -30,7 +30,6 @@ class CreateTourDeparture(BaseModel):
 
 
 class UpdateTourDeparture(BaseModel):
-    id: uuid.UUID | None = None
     tour_id: uuid.UUID| None = None
     departure_name: str | None = None
 
@@ -39,7 +38,6 @@ class TourDepartureModel(BaseModel):
     id: uuid.UUID
     tour_id: uuid.UUID
     departure_name: str
-    tour_departure_embedding: Optional[list[float]] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

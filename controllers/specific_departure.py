@@ -13,16 +13,16 @@ def create_departure(payload: CreateSpecificDeparture):
 
 
 @router.get("", response_model=SpecificDepartureModel)
-def get_departure(departure_id: uuid.UUID):
-    return SpecificDepartureService.get(departure_id)
+def get_departure(specific_departure_id: uuid.UUID):
+    return SpecificDepartureService.get(specific_departure_id)
 
 
 @router.put("/update", response_model=SpecificDepartureModel)
-def update_departure(departure_id: uuid.UUID, payload: UpdateSpecificDeparture):
-    return SpecificDepartureService.update(departure_id, payload)
+def update_departure(specific_departure_id: uuid.UUID, payload: UpdateSpecificDeparture):
+    return SpecificDepartureService.update(specific_departure_id, payload)
 
 
 @router.delete("")
-def delete_departure(departure_id: uuid.UUID):
-    SpecificDepartureService.delete(departure_id)
+def delete_departure(specific_departure_id: uuid.UUID):
+    SpecificDepartureService.delete(specific_departure_id)
     return {"message": "Specific departure deleted successfully"}

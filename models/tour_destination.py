@@ -32,14 +32,12 @@ class CreateTourDestination(BaseModel):
 class UpdateTourDestination(BaseModel):
     tour_id: uuid.UUID | None = None
     destination_name: str | None = None
-    destination_embedding: list[float] | None = None
 
 
 class TourDestinationModel(BaseModel):
     id: uuid.UUID
     tour_id: uuid.UUID
     destination_name: str
-    tour_destination_embedding: Optional[list[float]] = None
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)

@@ -2,6 +2,7 @@ import uuid
 from fastapi import APIRouter, Query, Depends
 from models.tour import TourCreateModel, TourUpdateModel, TourModel
 from services.tour import TourService
+from services.tour_search import TourSearchService
 from middleware.auth import get_current_admin
 
 router = APIRouter(prefix="/tours", tags=["Tours"])
@@ -74,8 +75,3 @@ def delete_tour_with_related(
     else:
         return {"message": "Tour not found", "status": 404}
 
-
-@router.get("/", response_model=list[TourModel])
-def get_all_tour():
-    """Lấy danh sách tất cả các tour"""
-    return TourService.get_all()

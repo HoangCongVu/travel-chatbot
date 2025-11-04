@@ -175,3 +175,13 @@ class TourRepository:
             tour_ids = q1.union(q2, q3).distinct().all()
 
             return [tid[0] for tid in tour_ids]
+
+    @staticmethod
+    def search_by_tour_type(tour_type_id: int) -> list[TourModel]:
+        """
+        Tìm kiếm tour theo tour_type_id
+        """
+        with Session() as session:
+            tours = session.query(TourTable).filter(TourTable.tour_type_id == tour_type_id).all()
+            return [TourModel.model_validate(t) for t in tours][::-1]  # Đảo ngược để lấy tour mới nhất trước
+

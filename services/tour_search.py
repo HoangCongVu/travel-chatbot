@@ -8,6 +8,7 @@ from repositories.visa_price import VisaPriceRepository
 from repositories.departure_schedule import DepartureScheduleRepository
 from repositories.recurring_schedule import RecurringScheduleRepository
 from repositories.specific_departure import SpecificDepartureRepository
+from repositories.tour_highlight_location import TourHighlightLocationRepository
 from models.tour import SearchTour
 
 
@@ -302,6 +303,7 @@ class TourSearchService:
 
             departures = [d.departure_name for d in TourDepartureRepository.get_by_tour_id(tid)]
             destinations = [d.destination_name for d in TourDestinationRepository.get_by_tour_id(tid)]
+            hilghlights = [d.location_name for d in TourHighlightLocationRepository.get_by_tour_id(tid)]
 
             # schedules
             departure_schedules = []
@@ -347,6 +349,7 @@ class TourSearchService:
                 "price_type": tour.price_type,
                 "departures": departures,
                 "destinations": destinations,
+                "highlight_locations": hilghlights,
                 "departure_schedules": departure_schedules,
                 "visa_prices": visa_prices,
                 "price_by_packages": price_by_packages,
@@ -354,3 +357,77 @@ class TourSearchService:
             })
 
         return {"tours": tours}
+
+    @staticmethod
+    def search_tours_by_type(tour_type_id: int):
+        """
+        Tìm kiếm tour theo tour_type_id với format giống get_all_tours
+        """
+        # Lấy tours theo tour_type_id
+        tours_by_type = TourRepository.search_by_tour_type(tour_type_id)
+        
+        if not tours_by_type:
+            return {"tours": []}
+
+        tours = []
+        for tour in tours_by_type:
+            tid = tour.id
+
+            departures = [d.departure_name for d in TourDepartureRepository.get_by_tour_id(tid)]
+            destinations = [d.destination_name for d in TourDestinationRepository.get_by_tour_id(tid)]
+            hilghlights = [d.location_name for d in TourHighlightLocationRepository.get_by_tour_id(tid)]
+
+            # schedules
+            departure_schedules = []
+            recurring_schedules = RecurringScheduleRepository.get_by_tour_id(tid)
+            specific_departures = SpecificDepartureRepository.get_by_tour_id(tid)
+
+            for r in recurring_schedules:
+                departure_schedules.append({
+                    "schedule_type": "recurring",
+                    "recurrence_type": r.recurrence_type,
+                    "start_date": str(r.start_date),
+                    "end_date": str(r.end_date),
+                    "specific_dates": [],
+                    "weekdays": r.weekdays
+                })
+
+            if specific_departures:
+                departure_schedules.append({
+                    "schedule_type": "specific",
+                    "specific_dates": [str(s.date) for s in specific_departures]
+                })
+
+            # prices
+            visa_prices = [{"price": p.price} for p in VisaPriceRepository.get_by_tour_id(tid)]
+            price_by_packages = [
+                {"package_name": p.package_name, "price": p.price}
+                for p in PriceByPackageRepository.get_by_tour_id(tid)
+            ]
+            price_by_dates = [
+                {"date": str(p.date), "price": p.price}
+                for p in PriceByDateRepository.get_by_tour_id(tid)
+            ]
+
+            tours.append({
+                "tour_id": tour.id,
+                "tour_name": tour.tour_name,
+                "tour_type_id": tour.tour_type_id,
+                "days": tour.days,
+                "description": tour.description,
+                "highlight": tour.highlight,
+                "itinerary_url": tour.itinerary_url,
+                "image_url": tour.image_url,
+                "promotion_info": tour.promotion_info,
+                "price_type": tour.price_type,
+                "departures": departures,
+                "destinations": destinations,
+                "highlight_locations": hilghlights,
+                "departure_schedules": departure_schedules,
+                "visa_prices": visa_prices,
+                "price_by_packages": price_by_packages,
+                "price_by_dates": price_by_dates
+            })
+
+        return {"tours": tours}
+

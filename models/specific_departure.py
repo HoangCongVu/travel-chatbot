@@ -28,7 +28,6 @@ class CreateSpecificDeparture(BaseModel):
 
 
 class UpdateSpecificDeparture(BaseModel):
-    id: uuid.UUID | None = None
     schedule_id: uuid.UUID | None = None
     date: Optional[date] = None
 

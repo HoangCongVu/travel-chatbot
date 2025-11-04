@@ -81,3 +81,10 @@ def get_all_tours():
         "total_results": len(results["tours"]),
         "data": results
     }
+
+@router.get("/search-by-type/{tour_type_id}")
+def search_tour_by_type(tour_type_id: int):
+    """
+    API tìm kiếm tour theo tour_type_id.
+    """
+    return TourSearchService.search_tours_by_type(tour_type_id)

@@ -60,8 +60,7 @@ class TourCreateModel(BaseModel):
 
 class TourUpdateModel(BaseModel):
     tour_name: Optional[str] = None
-    tour_type_id: Optional[int] = None
-    days: Optional[int] = None
+    tour_type_id: Optional[int]
     description: Optional[str] = None
     highlight: Optional[str] = None
     itinerary_url: Optional[str] = None

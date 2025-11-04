@@ -6,12 +6,12 @@ from services.tour_type import TourTypeService
 router = APIRouter(prefix="/tour-types", tags=["Tour Types"])
 
 
-@router.post("", response_model=TourTypeModel)
+@router.post("/create", response_model=TourTypeModel)
 def create_type(payload: CreateTourType):
     return TourTypeService.create(payload)
 
 
-@router.get("", response_model=TourTypeModel)
+@router.get("/get", response_model=TourTypeModel)
 def get_type(type_id: int):
     return TourTypeService.get(type_id)
 

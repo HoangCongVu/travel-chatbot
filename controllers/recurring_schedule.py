@@ -12,14 +12,14 @@ def create_schedule(payload: CreateRecurringSchedule):
     return RecurringScheduleService.create(payload)
 
 @router.get("", response_model=RecurringScheduleModel)
-def get_schedule(schedule_id: uuid.UUID):
-    return RecurringScheduleService.get(schedule_id)
+def get_schedule(recurring_schedule_id: uuid.UUID):
+    return RecurringScheduleService.get(recurring_schedule_id)
 
 @router.put("/update", response_model=RecurringScheduleModel)
-def update_schedule(schedule_id: uuid.UUID, payload: UpdateRecurringSchedule):
-    return RecurringScheduleService.update(schedule_id, payload)
+def update_schedule(recurring_schedule_id: uuid.UUID, payload: UpdateRecurringSchedule):
+    return RecurringScheduleService.update(recurring_schedule_id, payload)
 
 @router.delete("")
-def delete_schedule(schedule_id: uuid.UUID):
-    RecurringScheduleService.delete(schedule_id)
+def delete_schedule(recurring_schedule_id: uuid.UUID):
+    RecurringScheduleService.delete(recurring_schedule_id)
     return {"message": "Recurring schedule deleted successfully"}

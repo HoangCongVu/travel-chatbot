@@ -24,7 +24,6 @@ class CreateTourType(BaseModel):
     type_name: str
 
 class UpdateTourType(BaseModel):
-    id: int | None = None
     type_name: str | None = None
 
 class TourTypeModel(BaseModel):

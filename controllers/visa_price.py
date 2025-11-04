@@ -3,11 +3,11 @@ from fastapi import APIRouter
 from models.visa_price import CreateVisaPrice, VisaPriceModel
 from services.visa_price import VisaPriceService
 
-router = APIRouter(prefix="/visa-pice", tags=["Visa Price"])
+router = APIRouter(prefix="/visa-price", tags=["Visa Price"])
 
-@router.post("", response_model=VisaPriceModel)
+@router.post("/create", response_model=VisaPriceModel)
 def create_visa_price(payload: CreateVisaPrice):
-    return VisaPriceService.create_visa_price(payload)
+    return VisaPriceService.create(payload)
 
 @router.get("", response_model=VisaPriceModel)
 def get_visa_price(visa_price_id: uuid.UUID):

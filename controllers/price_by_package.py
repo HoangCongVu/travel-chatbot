@@ -11,7 +11,6 @@ router = APIRouter(prefix="/price-by-packages", tags=["Price By Packages"])
 def create_price(payload: CreatePriceByPackage):
     return PriceByPackageService.create(payload)
 
-
 @router.get("", response_model=PriceByPackageModel)
 def get_price(record_id: uuid.UUID):
     return PriceByPackageService.get(record_id)

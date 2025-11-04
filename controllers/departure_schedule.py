@@ -12,16 +12,16 @@ def create_departure_schedule(payload: CreateDepartureSchedule):
 
 
 @router.get("", response_model=DepartureScheduleModel)
-def get_departure_schedule(schedule_id: uuid.UUID):
-    return DepartureScheduleService.get(schedule_id)
+def get_departure_schedule(departure_schedule_id: uuid.UUID):
+    return DepartureScheduleService.get(departure_schedule_id)
 
 
 @router.put("/update", response_model=DepartureScheduleModel)
-def update_departure_schedule(schedule_id: uuid.UUID, payload: UpdateDepartureSchedule):
-    return DepartureScheduleService.update(schedule_id, payload)
+def update_departure_schedule(departure_schedule_id: uuid.UUID, payload: UpdateDepartureSchedule):
+    return DepartureScheduleService.update(departure_schedule_id, payload)
 
 
 @router.delete("")
-def delete_departure_schedule(schedule_id: uuid.UUID):
-    DepartureScheduleService.delete(schedule_id)
+def delete_departure_schedule(departure_schedule_id: uuid.UUID):
+    DepartureScheduleService.delete(departure_schedule_id)
     return {"message": "Departure schedule deleted successfully"}

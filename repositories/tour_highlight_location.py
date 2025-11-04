@@ -36,3 +36,13 @@ class TourHighlightLocationRepository:
             location = session.get(TourHighlightLocation, location_id)
             session.delete(location)
             session.commit()
+    
+    @staticmethod
+    def get_by_tour_id(tour_id: uuid.UUID) -> list[TourHighlightLocationModel]:
+        with Session() as session:
+            destinations = (
+                session.query(TourHighlightLocation)
+                .filter(TourHighlightLocation.tour_id == tour_id)
+                .all()
+            )
+            return [TourHighlightLocationModel.model_validate(d) for d in destinations]
