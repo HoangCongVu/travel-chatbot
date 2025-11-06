@@ -7,14 +7,10 @@ class PriceByPackageService:
     @staticmethod
     def create(payload: CreatePriceByPackage) -> PriceByPackageModel:
         return PriceByPackageRepository.create(payload)
-
+    
     @staticmethod
-    def get(record_id: uuid.UUID) -> PriceByPackageModel:
-        return PriceByPackageRepository.get_one(record_id)
-
-    @staticmethod
-    def update(record_id: uuid.UUID, payload: UpdatePriceByPackage) -> PriceByPackageModel:
-        return PriceByPackageRepository.update(record_id, payload)
+    def update_by_tour_id(tour_id: uuid.UUID, payload: UpdatePriceByPackage) -> list[PriceByPackageModel]:
+        return PriceByPackageRepository.update_by_tour_id(tour_id, payload)
 
     @staticmethod
     def delete(record_id: uuid.UUID):

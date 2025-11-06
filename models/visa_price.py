@@ -24,6 +24,9 @@ class CreateVisaPrice(BaseModel):
     tour_id: uuid.UUID
     price: float
 
+class UpdateVisaPrice(BaseModel):
+    price: float
+
 class VisaPriceModel(BaseModel):
     id: uuid.UUID
     tour_id: uuid.UUID

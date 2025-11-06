@@ -11,16 +11,9 @@ router = APIRouter(prefix="/tour-highlight-locations", tags=["Tour Highlight Loc
 def create_location(payload: CreateTourHighlightLocation):
     return TourHighlightLocationService.create(payload)
 
-
-@router.get("", response_model=TourHighlightLocationModel)
-def get_location(location_id: uuid.UUID):
-    return TourHighlightLocationService.get(location_id)
-
-
-@router.put("/update", response_model=TourHighlightLocationModel)
-def update_location(location_id: uuid.UUID, payload: UpdateTourHighlightLocation):
-    return TourHighlightLocationService.update(location_id, payload)
-
+@router.put("/update-by-tour", response_model=list[TourHighlightLocationModel])
+def update_location_by_tour(tour_id: uuid.UUID, payload: UpdateTourHighlightLocation):
+    return TourHighlightLocationService.update_by_tour_id(tour_id, payload)
 
 @router.delete("")
 def delete_location(location_id: uuid.UUID):

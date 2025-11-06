@@ -12,20 +12,23 @@ def create_departure(payload: CreateTourDeparture):
     return TourDepartureService.create(payload)
 
 
-@router.get("", response_model=TourDepartureModel)
-def get_departure(departure_id: uuid.UUID):
-    return TourDepartureService.get(departure_id)
+# @router.get("", response_model=TourDepartureModel)
+# def get_departure(departure_id: uuid.UUID):
+#     return TourDepartureService.get(departure_id)
 
 
-@router.put("/update", response_model=TourDepartureModel)
-def update_departure(departure_id: uuid.UUID, payload: UpdateTourDeparture):
-    return TourDepartureService.update(departure_id, payload)
+# @router.put("/update", response_model=TourDepartureModel)
+# def update_departure(departure_id: uuid.UUID, payload: UpdateTourDeparture):
+#     return TourDepartureService.update(departure_id, payload)
 
+@router.put("/update-by-tour", response_model=list[TourDepartureModel])
+def update_departure_by_tour(tour_id: uuid.UUID, payload: UpdateTourDeparture):
+    return TourDepartureService.update_by_tour_id(tour_id, payload)
 
-@router.delete("")
-def delete_departure(departure_id: uuid.UUID):
-    TourDepartureService.delete(departure_id)
-    return {"message": "Tour departure deleted successfully"}
+# @router.delete("")
+# def delete_departure(departure_id: uuid.UUID):
+#     TourDepartureService.delete(departure_id)
+#     return {"message": "Tour departure deleted successfully"}
 
 @router.get("/search-text")
 def search_tour_departures(

@@ -14,6 +14,7 @@ from models.tour_highlight_location import TourHighlightLocation
 from models.tour_destination import TourDestination
 from models.tour_departure import TourDeparture
 from models.price_by_package import PriceByPackage
+
 class TourRepository:
     @staticmethod
     def create(payload: TourCreateModel) -> TourModel:

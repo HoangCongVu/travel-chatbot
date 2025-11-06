@@ -15,20 +15,20 @@ class TourHighlightLocationRepository:
             return TourHighlightLocationModel.model_validate(location)
 
     @staticmethod
-    def get_one(location_id: uuid.UUID) -> TourHighlightLocationModel:
+    def update_by_tour_id(tour_id: uuid.UUID, data: UpdateTourHighlightLocation) -> list[TourHighlightLocationModel]:
         with Session() as session:
-            location = session.get(TourHighlightLocation, location_id)
-            return TourHighlightLocationModel.model_validate(location)
-
-    @staticmethod
-    def update(location_id: uuid.UUID, data: UpdateTourHighlightLocation) -> TourHighlightLocationModel:
-        with Session() as session:
-            location = session.get(TourHighlightLocation, location_id)
-            for field, value in data.model_dump(exclude_unset=True).items():
-                setattr(location, field, value)
+            locations = session.query(TourHighlightLocation).filter(TourHighlightLocation.tour_id == tour_id).all()
+            if not locations:
+                return []
+            
+            updated_locations = []
+            for location in locations:
+                for field, value in data.model_dump(exclude_unset=True).items():
+                    setattr(location, field, value)
+                updated_locations.append(TourHighlightLocationModel.model_validate(location))
+            
             session.commit()
-            session.refresh(location)
-            return TourHighlightLocationModel.model_validate(location)
+            return updated_locations
 
     @staticmethod
     def delete(location_id: uuid.UUID):

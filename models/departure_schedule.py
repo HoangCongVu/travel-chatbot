@@ -27,7 +27,6 @@ class CreateDepartureSchedule(BaseModel):
 
 
 class UpdateDepartureSchedule(BaseModel):
-    tour_id: uuid.UUID | None = None
     schedule_type: str | None = None
     model_config = ConfigDict(from_attributes=True)
 

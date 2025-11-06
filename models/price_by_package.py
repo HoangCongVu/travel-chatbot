@@ -28,7 +28,6 @@ class CreatePriceByPackage(BaseModel):
 
 
 class UpdatePriceByPackage(BaseModel):
-    tour_id: uuid.UUID | None = None
     package_name: str | None = None
     price: float | None = None
 

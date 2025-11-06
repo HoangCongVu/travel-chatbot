@@ -9,12 +9,8 @@ class TourDestinationService:
         return TourDestinationRepository.create(payload)
 
     @staticmethod
-    def get(destination_id: uuid.UUID) -> TourDestinationModel:
-        return TourDestinationRepository.get_one(destination_id)
-
-    @staticmethod
-    def update(destination_id: uuid.UUID, payload: UpdateTourDestination) -> TourDestinationModel:
-        return TourDestinationRepository.update(destination_id, payload)
+    def update_by_tour_id(tour_id: uuid.UUID, payload: UpdateTourDestination) -> list[TourDestinationModel]:
+        return TourDestinationRepository.update_by_tour_id(tour_id, payload)
 
     @staticmethod
     def delete(destination_id: uuid.UUID):

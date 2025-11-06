@@ -28,7 +28,6 @@ class CreateTourHighlightLocation(BaseModel):
 
 
 class UpdateTourHighlightLocation(BaseModel):
-    tour_id: uuid.UUID | None = None
     location_name: str | None = None
 
 

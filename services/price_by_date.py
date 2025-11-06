@@ -9,12 +9,8 @@ class PriceByDateService:
         return PriceByDateRepository.create(payload)
 
     @staticmethod
-    def get(price_id: uuid.UUID) -> PriceByDateModel:
-        return PriceByDateRepository.get_one(price_id)
-
-    @staticmethod
-    def update(price_id: uuid.UUID, payload: UpdatePriceByDate) -> PriceByDateModel:
-        return PriceByDateRepository.update(price_id, payload)
+    def update_by_tour_id(tour_id: uuid.UUID, payload: UpdatePriceByDate) -> list[PriceByDateModel]:
+        return PriceByDateRepository.update_by_tour_id(tour_id, payload)
 
     @staticmethod
     def delete(price_id: uuid.UUID):

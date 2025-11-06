@@ -9,12 +9,8 @@ class DepartureScheduleService:
         return DepartureScheduleRepository.create(payload)
 
     @staticmethod
-    def get(schedule_id: uuid.UUID) -> DepartureScheduleModel:
-        return DepartureScheduleRepository.get_one(schedule_id)
-
-    @staticmethod
-    def update(schedule_id: uuid.UUID, payload: UpdateDepartureSchedule) -> DepartureScheduleModel:
-        return DepartureScheduleRepository.update(schedule_id, payload)
+    def update_by_tour_id(tour_id: uuid.UUID, payload: UpdateDepartureSchedule) -> list[DepartureScheduleModel]:
+        return DepartureScheduleRepository.update_by_tour_id(tour_id, payload)
 
     @staticmethod
     def delete(schedule_id: uuid.UUID):

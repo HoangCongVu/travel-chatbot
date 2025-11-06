@@ -27,9 +27,9 @@ def create_tour(
     return TourService.create(tour)
 
 
-@router.get("/{tour_id}", response_model=TourModel | None)
+@router.get("/{tour_id}")
 def get_tour(tour_id: uuid.UUID):
-    """Lấy thông tin 1 tour theo ID"""
+    """Lấy thông tin chi tiết 1 tour theo ID với format đầy đủ"""
     return TourService.get(tour_id)
 
 

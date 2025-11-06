@@ -10,16 +10,9 @@ router = APIRouter(prefix="/price-by-dates", tags=["Price By Dates"])
 def create_price(payload: CreatePriceByDate):
     return PriceByDateService.create(payload)
 
-
-@router.get("", response_model=PriceByDateModel)
-def get_price(price_id: uuid.UUID):
-    return PriceByDateService.get(price_id)
-
-
-@router.put("/update", response_model=PriceByDateModel)
-def update_price(price_id: uuid.UUID, payload: UpdatePriceByDate):
-    return PriceByDateService.update(price_id, payload)
-
+@router.put("/update-by-tour", response_model=list[PriceByDateModel])
+def update_price_by_tour(tour_id: uuid.UUID, payload: UpdatePriceByDate):
+    return PriceByDateService.update_by_tour_id(tour_id, payload)
 
 @router.delete("")
 def delete_price(price_id: uuid.UUID):

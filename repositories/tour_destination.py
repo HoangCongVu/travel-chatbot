@@ -19,20 +19,23 @@ class TourDestinationRepository:
             return TourDestinationModel.model_validate(destination)
 
     @staticmethod
-    def get_one(destination_id: uuid.UUID) -> TourDestinationModel:
+    def update_by_tour_id(tour_id: uuid.UUID, data: UpdateTourDestination) -> list[TourDestinationModel]:
         with Session() as session:
-            destination = session.get(TourDestination, destination_id)
-            return TourDestinationModel.model_validate(destination)
-
-    @staticmethod
-    def update(destination_id: uuid.UUID, data: UpdateTourDestination) -> TourDestinationModel:
-        with Session() as session:
-            destination = session.get(TourDestination, destination_id)
-            for field, value in data.model_dump(exclude_unset=True).items():
-                setattr(destination, field, value)
+            destinations = session.query(TourDestination).filter(TourDestination.tour_id == tour_id).all()
+            if not destinations:
+                return []
+            
+            updated_destinations = []
+            for destination in destinations:
+                for field, value in data.model_dump(exclude_unset=True).items():
+                    # Update embedding if destination_name is changed
+                    if field == 'destination_name' and value:
+                        destination.tour_destination_embedding_vector = generate_embedding(value)
+                    setattr(destination, field, value)
+                updated_destinations.append(TourDestinationModel.model_validate(destination))
+            
             session.commit()
-            session.refresh(destination)
-            return TourDestinationModel.model_validate(destination)
+            return updated_destinations
 
     @staticmethod
     def delete(destination_id: uuid.UUID):

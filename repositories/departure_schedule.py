@@ -30,6 +30,22 @@ class DepartureScheduleRepository:
             return DepartureScheduleModel.model_validate(schedule)
 
     @staticmethod
+    def update_by_tour_id(tour_id: uuid.UUID, data: UpdateDepartureSchedule) -> list[DepartureScheduleModel]:
+        with Session() as session:
+            schedules = session.query(DepartureSchedule).filter(DepartureSchedule.tour_id == tour_id).all()
+            if not schedules:
+                return []
+            
+            updated_schedules = []
+            for schedule in schedules:
+                for field, value in data.model_dump(exclude_unset=True).items():
+                    setattr(schedule, field, value)
+                updated_schedules.append(DepartureScheduleModel.model_validate(schedule))
+            
+            session.commit()
+            return updated_schedules
+
+    @staticmethod
     def delete(schedule_id: uuid.UUID):
         with Session() as session:
             schedule = session.get(DepartureSchedule, schedule_id)

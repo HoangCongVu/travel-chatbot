@@ -7,14 +7,10 @@ class TourHighlightLocationService:
     @staticmethod
     def create(payload: CreateTourHighlightLocation) -> TourHighlightLocationModel:
         return TourHighlightLocationRepository.create(payload)
-
+    
     @staticmethod
-    def get(location_id: uuid.UUID) -> TourHighlightLocationModel:
-        return TourHighlightLocationRepository.get_one(location_id)
-
-    @staticmethod
-    def update(location_id: uuid.UUID, payload: UpdateTourHighlightLocation) -> TourHighlightLocationModel:
-        return TourHighlightLocationRepository.update(location_id, payload)
+    def update_by_tour_id(tour_id: uuid.UUID, payload: UpdateTourHighlightLocation) -> list[TourHighlightLocationModel]:
+        return TourHighlightLocationRepository.update_by_tour_id(tour_id, payload)
 
     @staticmethod
     def delete(location_id: uuid.UUID):

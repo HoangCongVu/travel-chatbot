@@ -30,7 +30,6 @@ class CreateTourDestination(BaseModel):
     
 
 class UpdateTourDestination(BaseModel):
-    tour_id: uuid.UUID | None = None
     destination_name: str | None = None
 
 

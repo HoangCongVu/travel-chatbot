@@ -28,7 +28,6 @@ class CreatePriceByDate(BaseModel):
     price: float
 
 class UpdatePriceByDate(BaseModel):
-    tour_id: uuid.UUID | None = None
     date: datetime | None = None
     price: float | None = None
 

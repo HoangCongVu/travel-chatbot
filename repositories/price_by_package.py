@@ -15,20 +15,20 @@ class PriceByPackageRepository:
             return PriceByPackageModel.model_validate(record)
 
     @staticmethod
-    def get_one(record_id: uuid.UUID) -> PriceByPackageModel:
+    def update_by_tour_id(tour_id: uuid.UUID, data: UpdatePriceByPackage) -> list[PriceByPackageModel]:
         with Session() as session:
-            record = session.get(PriceByPackage, record_id)
-            return PriceByPackageModel.model_validate(record)
-
-    @staticmethod
-    def update(record_id: uuid.UUID, data: UpdatePriceByPackage) -> PriceByPackageModel:
-        with Session() as session:
-            record = session.get(PriceByPackage, record_id)
-            for field, value in data.model_dump(exclude_unset=True).items():
-                setattr(record, field, value)
+            records = session.query(PriceByPackage).filter(PriceByPackage.tour_id == tour_id).all()
+            if not records:
+                return []
+            
+            updated_records = []
+            for record in records:
+                for field, value in data.model_dump(exclude_unset=True).items():
+                    setattr(record, field, value)
+                updated_records.append(PriceByPackageModel.model_validate(record))
+            
             session.commit()
-            session.refresh(record)
-            return PriceByPackageModel.model_validate(record)
+            return updated_records
 
     @staticmethod
     def delete(record_id: uuid.UUID):

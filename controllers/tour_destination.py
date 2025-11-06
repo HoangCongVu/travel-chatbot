@@ -10,21 +10,14 @@ router = APIRouter(prefix="/tour-destinations", tags=["Tour Destinations"])
 def create_destination(payload: CreateTourDestination):
     return TourDestinationService.create(payload)
 
+@router.put("/update-by-tour", response_model=list[TourDestinationModel])
+def update_destination_by_tour(tour_id: uuid.UUID, payload: UpdateTourDestination):
+    return TourDestinationService.update_by_tour_id(tour_id, payload)
 
-@router.get("", response_model=TourDestinationModel)
-def get_destination(destination_id: uuid.UUID):
-    return TourDestinationService.get(destination_id)
-
-
-@router.put("/update", response_model=TourDestinationModel)
-def update_destination(destination_id: uuid.UUID, payload: UpdateTourDestination):
-    return TourDestinationService.update(destination_id, payload)
-
-
-@router.delete("")
-def delete_destination(destination_id: uuid.UUID):
-    TourDestinationService.delete(destination_id)
-    return {"message": "Tour destination deleted successfully"}
+# @router.delete("")
+# def delete_destination(destination_id: uuid.UUID):
+#     TourDestinationService.delete(destination_id)
+#     return {"message": "Tour destination deleted successfully"}
 
 @router.get("/search-text")
 def search_tour_destinations(
