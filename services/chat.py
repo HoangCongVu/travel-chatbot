@@ -28,3 +28,10 @@ class ChatService:
     @staticmethod
     def get_all_chats_by_user(user_id: uuid.UUID) -> list[ChatModel]:
         return ChatRepository.get_all_chat_by_user(user_id)
+
+    @staticmethod
+    def find_by_platform_id(platform: str, external_id: str) -> ChatModel | None:
+        """
+        ✅ Tìm chat theo platform và external_user_id
+        """
+        return ChatRepository.find_by_platform_and_external_id(platform, external_id)

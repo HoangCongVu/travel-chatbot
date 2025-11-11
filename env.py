@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     DB_PORT: int
 
     OPENAI_API_KEY: str
+    
+    # Facebook Webhook
+    PAGE_ACCESS_TOKEN: str
+    VERIFY_TOKEN: str
 
     class Config:
         env_file = ".env"

@@ -18,10 +18,6 @@ class ChatRepository:
             if not chat_data.get("user_id"):
                 chat_data["user_id"] = None
 
-            # ✅ Nếu không có title, tạo mặc định
-            # if not chat_data.get("title"):
-            #     chat_data["title"] = "New Chat"
-
             chat = Chat(**chat_data)
             session.add(chat)
             session.commit()
@@ -73,3 +69,18 @@ class ChatRepository:
         with Session() as session:
             chats = session.query(Chat).filter(Chat.session_id == session_id).all()
             return [ChatModel.model_validate(chat) for chat in chats]
+
+    @staticmethod
+    def find_by_platform_and_external_id(platform: str, external_user_id: str) -> ChatModel | None:
+        """
+        ✅ Tìm chat theo platform và external_user_id (Facebook, Zalo, etc.)
+        """
+        with Session() as session:
+            chat = session.query(Chat).filter(
+                Chat.platform == platform,
+                Chat.external_user_id == external_user_id
+            ).first()
+            
+            if chat:
+                return ChatModel.model_validate(chat)
+            return None

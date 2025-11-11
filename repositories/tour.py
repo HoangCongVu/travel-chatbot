@@ -186,3 +186,98 @@ class TourRepository:
             tours = session.query(TourTable).filter(TourTable.tour_type_id == tour_type_id).all()
             return [TourModel.model_validate(t) for t in tours][::-1]  # Đảo ngược để lấy tour mới nhất trước
 
+    @staticmethod
+    def search_tour_chat(destination: str = None, min_price: float = None, max_price: float = None, target_date = None, limit: int = 5):
+        """
+        Tìm kiếm tour với nhiều điều kiện kết hợp:
+        - destination: Tên địa điểm đích (tìm kiếm trong tour_destinations)
+        - min_price, max_price: Khoảng giá (tìm trong price_by_packages hoặc price_by_dates)
+        - target_date: Ngày khởi hành (tìm trong specific_departures hoặc recurring_schedules)
+        - limit: Giới hạn số lượng kết quả
+        
+        Returns:
+            List các tour_id thỏa mãn điều kiện
+        """
+        from datetime import date as date_type
+        
+        with Session() as session:
+            # Bắt đầu với query cơ bản từ bảng tours
+            query = session.query(TourTable.id).distinct()
+            
+            # Điều kiện 1: Lọc theo destination
+            if destination:
+                query = query.join(
+                    TourDestination, 
+                    TourTable.id == TourDestination.tour_id
+                ).filter(
+                    TourDestination.destination_name.ilike(f"%{destination}%")
+                )
+            
+            # Điều kiện 2: Lọc theo khoảng giá
+            if min_price is not None or max_price is not None:
+                # Subquery cho price_by_packages
+                price_package_subquery = (
+                    session.query(PriceByPackage.tour_id)
+                    .filter(PriceByPackage.tour_id == TourTable.id)
+                )
+                if min_price is not None:
+                    price_package_subquery = price_package_subquery.filter(PriceByPackage.price >= min_price)
+                if max_price is not None:
+                    price_package_subquery = price_package_subquery.filter(PriceByPackage.price <= max_price)
+                
+                # Subquery cho price_by_dates
+                price_date_subquery = (
+                    session.query(PriceByDate.tour_id)
+                    .filter(PriceByDate.tour_id == TourTable.id)
+                )
+                if min_price is not None:
+                    price_date_subquery = price_date_subquery.filter(PriceByDate.price >= min_price)
+                if max_price is not None:
+                    price_date_subquery = price_date_subquery.filter(PriceByDate.price <= max_price)
+                
+                # Kết hợp điều kiện: tour phải có giá trong khoảng (từ một trong hai bảng)
+                query = query.filter(
+                    sa.or_(
+                        price_package_subquery.exists(),
+                        price_date_subquery.exists()
+                    )
+                )
+            
+            # Điều kiện 3: Lọc theo ngày khởi hành
+            if target_date:
+                if isinstance(target_date, str):
+                    target_date = date_type.fromisoformat(target_date)
+                
+                # Subquery 1: Specific departures (Ngày khởi hành cụ thể)
+                specific_subquery = (
+                    session.query(DepartureSchedule.tour_id)
+                    .join(SpecificDeparture, SpecificDeparture.schedule_id == DepartureSchedule.id)
+                    .filter(
+                        DepartureSchedule.tour_id == TourTable.id,
+                        SpecificDeparture.date == target_date
+                    )
+                )
+                
+                # Subquery 2: Recurring schedules - Tìm theo NGÀY BẮT ĐẦU (start_date)
+                recurring_subquery = (
+                    session.query(DepartureSchedule.tour_id)
+                    .join(RecurringSchedule, RecurringSchedule.schedule_id == DepartureSchedule.id)
+                    .filter(
+                        DepartureSchedule.tour_id == TourTable.id,
+                        RecurringSchedule.start_date == target_date  # Chỉ tìm tour BẮT ĐẦU vào ngày này
+                    )
+                )
+                
+                # Kết hợp điều kiện: tour khởi hành vào ngày đó
+                query = query.filter(
+                    sa.or_(
+                        specific_subquery.exists(),
+                        recurring_subquery.exists()
+                    )
+                )
+            
+            # Giới hạn số lượng kết quả
+            tour_ids = query.limit(limit).all()
+            
+            return [tid[0] for tid in tour_ids]
+

@@ -431,3 +431,114 @@ class TourSearchService:
 
         return {"tours": tours}
 
+
+    @staticmethod
+    def search_tour_chat(destination: str = None, min_price: float = None, max_price: float = None, target_date = None, limit: int = 5):
+        """
+        Tìm kiếm tour với nhiều điều kiện kết hợp cho chatbot.
+        
+        Args:
+            destination: Tên địa điểm đích (ví dụ: "Đà Lạt", "Singapore")
+            min_price: Giá tối thiểu (VNĐ)
+            max_price: Giá tối đa (VNĐ)
+            target_date: Ngày khởi hành (date object hoặc string "YYYY-MM-DD")
+            limit: Số lượng tour tối đa trả về (mặc định 5)
+            
+        Returns:
+            Dict chứa danh sách tours với đầy đủ thông tin chi tiết
+            
+        Example:
+            # Tìm tour đi Đà Lạt, giá từ 3-5 triệu, khởi hành ngày 15/7/2025
+            result = TourSearchService.search_tour_chat(
+                destination="Đà Lạt",
+                min_price=3000000,
+                max_price=5000000,
+                target_date="2025-07-15",
+                limit=3
+            )
+        """
+        # Gọi repository để lấy danh sách tour_ids thỏa mãn điều kiện
+        tour_ids = TourRepository.search_tour_chat(
+            destination=destination,
+            min_price=min_price,
+            max_price=max_price,
+            target_date=target_date,
+            limit=limit
+        )
+        
+        if not tour_ids:
+            return {"tours": [], "message": "Không tìm thấy tour phù hợp với điều kiện tìm kiếm"}
+        
+        # Lấy thông tin chi tiết cho mỗi tour
+        tours = []
+        for tid in tour_ids:
+            tour = TourRepository.get(tid)
+            if not tour:
+                continue
+
+            # Lấy thông tin điểm khởi hành và đích đến
+            departures = [d.departure_name for d in TourDepartureRepository.get_by_tour_id(tid)]
+            destinations = [d.destination_name for d in TourDestinationRepository.get_by_tour_id(tid)]
+            hilghlights = [h.location_name for h in TourHighlightLocationRepository.get_by_tour_id(tid)]
+
+            # Lấy lịch trình khởi hành
+            departure_schedules = []
+            recurring_schedules = RecurringScheduleRepository.get_by_tour_id(tid)
+            specific_departures = SpecificDepartureRepository.get_by_tour_id(tid)
+
+            for r in recurring_schedules:
+                departure_schedules.append({
+                    "schedule_type": "recurring",
+                    "recurrence_type": r.recurrence_type,
+                    "start_date": str(r.start_date),
+                    "end_date": str(r.end_date),
+                    "weekdays": r.weekdays
+                })
+
+            if specific_departures:
+                departure_schedules.append({
+                    "schedule_type": "specific",
+                    "specific_dates": [str(s.date) for s in specific_departures]
+                })
+
+            # Lấy thông tin giá
+            visa_prices = [{"price": p.price} for p in VisaPriceRepository.get_by_tour_id(tid)]
+            price_by_packages = [
+                {"package_name": p.package_name, "price": p.price}
+                for p in PriceByPackageRepository.get_by_tour_id(tid)
+            ]
+            price_by_dates = [
+                {"date": str(p.date), "price": p.price}
+                for p in PriceByDateRepository.get_by_tour_id(tid)
+            ]
+
+            tours.append({
+                "tour_id": str(tour.id),
+                "tour_name": tour.tour_name,
+                "tour_type_id": tour.tour_type_id,
+                "days": tour.days,
+                "description": tour.description,
+                "highlight": tour.highlight,
+                "itinerary_url": tour.itinerary_url,
+                "image_url": tour.image_url,
+                "promotion_info": tour.promotion_info,
+                "price_type": tour.price_type,
+                "departures": departures,
+                "destinations": destinations,
+                "highlight_locations": hilghlights,
+                "departure_schedules": departure_schedules,
+                "visa_prices": visa_prices,
+                "price_by_packages": price_by_packages,
+                "price_by_dates": price_by_dates
+            })
+
+        return {
+            "tours": tours,
+            "total_found": len(tours),
+            "search_criteria": {
+                "destination": destination,
+                "min_price": min_price,
+                "max_price": max_price,
+                "target_date": str(target_date) if target_date else None
+            }
+        }

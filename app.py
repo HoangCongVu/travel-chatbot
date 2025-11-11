@@ -23,6 +23,7 @@ recurring_schedule,
 specific_departure,
 agent_tour,
 tour_search,
+facebook_webhook,
 )
 
 def create_app() -> FastAPI:
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(specific_departure.router, prefix="/api")
     app.include_router(agent_tour.router, prefix="/api")
     app.include_router(tour_search.router, prefix="/api")
+    app.include_router(facebook_webhook.router)  # Không có prefix để match /webhook
     return app
 
 
