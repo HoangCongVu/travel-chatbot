@@ -7,6 +7,8 @@ from services.chat import ChatService
 from services.message import MessageService
 from models.chat import CreateChatPayload
 from models.message import CreateMessagePayload
+import httpx
+import asyncio 
 
 router = APIRouter(tags=["Facebook Webhook"])
 
@@ -138,90 +140,87 @@ async def handle_webhook(request: Request):
 
 
 async def send_facebook_message(recipient_id: str, message_text: str):
-    import httpx
-    import asyncio # Thêm thư viện này
-
     url = "https://graph.facebook.com/v21.0/me/messages"
     headers = {"Content-Type": "application/json"}
     params = {"access_token": PAGE_ACCESS_TOKEN}
 
-    # --- Logic chia tin nhắn được cải thiện ---
     MAX_LENGTH = 2000
     messages = []
-    
-    # Nếu tin nhắn ban đầu rỗng thì không làm gì cả
-    if not message_text.strip():
+
+    # --- Bỏ qua nếu tin nhắn trống ---
+    if not message_text or not message_text.strip():
         return {"status": "skipped", "reason": "Empty message"}
 
+    # --- Chia nhỏ tin nhắn dài ---
     while message_text:
-        # Nếu tin nhắn còn lại đã ngắn hơn, chỉ cần gửi và thoát
         if len(message_text) <= MAX_LENGTH:
-            messages.append(message_text)
+            messages.append(message_text.strip())
             break
-        
-        # 1. Tìm vị trí ngắt ưu tiên (xuống dòng, hết câu)
+
         split_at = -1
-        # Ưu tiên ngắt sau dấu xuống dòng
         pos_n = message_text.rfind('\n', 0, MAX_LENGTH)
-        # Ưu tiên ngắt sau dấu chấm + cách
         pos_dot = message_text.rfind('. ', 0, MAX_LENGTH)
-        
+
         if pos_n != -1:
-            split_at = pos_n + 1 # Ngắt sau ký tự '\n'
+            split_at = pos_n + 1
         elif pos_dot != -1:
-            split_at = pos_dot + 2 # Ngắt sau '. '
-        
-        # 2. Nếu không có vị trí đẹp, tìm dấu cách cuối cùng
-        if split_at == -1:
+            split_at = pos_dot + 2
+        else:
             pos_space = message_text.rfind(' ', 0, MAX_LENGTH)
-            if pos_space != -1:
-                split_at = pos_space + 1 # Ngắt sau dấu ' '
-            else:
-                # 3. Nếu là một chuỗi siêu dài không có gì, ngắt cứng
-                split_at = MAX_LENGTH
-        
-        # Thêm phần tin nhắn đã ngắt vào danh sách
+            split_at = pos_space + 1 if pos_space != -1 else MAX_LENGTH
+
         messages.append(message_text[:split_at].strip())
-        # Cập nhật tin nhắn còn lại
         message_text = message_text[split_at:].strip()
 
-        if len(messages) >= 10:  # Giới hạn an toàn
-            print(f"⚠️ Warning: Message for {recipient_id} split into 10+ parts. Truncating.")
+        if len(messages) >= 10:
+            print(f"⚠️ Warning: Message for {recipient_id} split into more than 10 parts, truncating.")
             break
-    # --- Hết logic chia tin nhắn ---
 
+    # --- Gửi tin nhắn ---
     messages_sent = 0
-    async with httpx.AsyncClient() as client:
+    timeout = httpx.Timeout(20.0, connect=10.0, read=10.0)  # tăng timeout tổng 20s
+
+    async with httpx.AsyncClient(timeout=timeout) as client:
         for i, msg in enumerate(messages):
-            if not msg: # Bỏ qua nếu phần tin nhắn bị rỗng
+            if not msg:
                 continue
-                
+
             payload = {
                 "recipient": {"id": recipient_id},
                 "message": {"text": msg},
                 "messaging_type": "RESPONSE"
             }
-            
-            try:
-                response = await client.post(url, json=payload, headers=headers, params=params)
-                
-                # --- Thêm xử lý lỗi ---
-                # Nếu Facebook trả về lỗi, báo lỗi ngay lập tức
-                response.raise_for_status() 
-                
-                print(f"Sent part {i+1}/{len(messages)} to {recipient_id}: {response.status_code}")
-                messages_sent += 1
-                
-                # Facebook khuyến nghị nên có độ trễ nhỏ giữa các tin nhắn
-                if len(messages) > 1:
-                    await asyncio.sleep(1) 
-                    
-            except httpx.HTTPStatusError as e:
-                print(f"❌ Error sending message to {recipient_id}: {e.response.status_code} - {e.response.text}")
-                # Báo lỗi ra ngoài để hàm handle_webhook biết
-                raise e 
-            except httpx.RequestError as e:
-                print(f"❌ Network Error sending message: {e}")
-                raise e
+
+            # Retry logic: thử lại tối đa 3 lần nếu lỗi mạng
+            for attempt in range(3):
+                try:
+                    response = await client.post(url, json=payload, headers=headers, params=params)
+                    response.raise_for_status()
+
+                    print(f"✅ Sent part {i+1}/{len(messages)} to {recipient_id}: {response.status_code}")
+                    messages_sent += 1
+
+                    # Thêm độ trễ nhỏ giữa các phần tin nhắn
+                    if len(messages) > 1:
+                        await asyncio.sleep(1)
+                    break  # thành công, thoát retry
+
+                except httpx.ConnectTimeout:
+                    print(f"⚠️ Connect timeout (attempt {attempt+1}/3) sending to {recipient_id}")
+                    if attempt == 2:
+                        print("❌ Gửi thất bại sau 3 lần thử (ConnectTimeout).")
+                        return {"status": "failed", "error": "connect_timeout"}
+                    await asyncio.sleep(2)
+
+                except httpx.HTTPStatusError as e:
+                    print(f"❌ HTTP error {e.response.status_code}: {e.response.text}")
+                    # Nếu token sai hoặc lỗi quyền => không retry nữa
+                    return {"status": "failed", "error": f"http_{e.response.status_code}"}
+
+                except httpx.RequestError as e:
+                    print(f"❌ Network error sending to {recipient_id}: {e}")
+                    if attempt == 2:
+                        return {"status": "failed", "error": "network_error"}
+                    await asyncio.sleep(2)
 
     return {"status": "success", "messages_sent": messages_sent}

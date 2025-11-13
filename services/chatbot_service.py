@@ -70,6 +70,15 @@ class ChatbotService:
             Dict chứa reply
         """
         try:
+            # ✅ VALIDATION: Kiểm tra tin nhắn hợp lệ
+            if not user_message or not user_message.strip():
+                return {
+                    "reply": "Xin lỗi, tôi chưa nhận được tin nhắn từ bạn. Bạn muốn hỏi gì ạ? 😊"
+                }
+            
+            # Loại bỏ khoảng trắng thừa
+            user_message = user_message.strip()
+            
             # Lấy lịch sử chat
             chat_history = get_recent_chat_history(chat_id, 6)
             context_message = format_context_message(chat_history)
