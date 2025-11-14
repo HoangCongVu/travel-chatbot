@@ -8,6 +8,7 @@ import uuid
 import sqlalchemy as sa
 from db import Base
 from models.chat import Chat
+from sqlalchemy.dialects import postgresql
 
 class Message(Base):
     __tablename__ = "messages"
@@ -22,17 +23,20 @@ class Message(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
+    meta_data: Mapped[Optional[dict]] = mapped_column(postgresql.JSONB(astext_type=sa.Text()), nullable=True)
 
 # Payload khi tạo tin nhắn mới
 class CreateMessagePayload(BaseModel):
     chat_id: uuid.UUID
     content: str
     role: str
+    meta_data: Optional[dict] = None
 
 # Payload khi cập nhật tin nhắn
 class UpdateMessagePayload(BaseModel):
     content: Optional[str]
     role: Optional[str]
+    meta_data: Optional[dict] = None
 
 # Model phản hồi trả về từ API
 class MessageModel(BaseModel):
@@ -42,4 +46,5 @@ class MessageModel(BaseModel):
     role: str
     created_at: datetime
     updated_at: datetime
+    meta_data: Optional[dict] = None
     model_config = ConfigDict(from_attributes=True)

@@ -2,6 +2,7 @@
 Service xử lý business logic cho chatbot
 """
 import json
+import ast
 import uuid
 from autogen import GroupChat, GroupChatManager
 from services.message import MessageService
@@ -58,6 +59,49 @@ class ChatbotService:
         return None
     
     @staticmethod
+    def _extract_metadata(chat_messages: list) -> dict:
+        """
+        Trích xuất metadata từ chat messages để lưu vào database
+        Lưu kết quả đầy đủ từ tool call (nguyên cục JSON tour)
+        
+        Args:
+            chat_messages: List các messages từ groupchat
+            
+        Returns:
+            Dict chứa metadata (tour results) hoặc None
+        """
+        # Tìm tool result chứa thông tin tour
+        for msg in reversed(chat_messages):            
+            if msg.get("role") == "tool":
+                content = msg.get("content", "{}")
+                
+                try:
+                    # Nếu content đã là dict, sử dụng trực tiếp
+                    if isinstance(content, dict):
+                        tool_content = content
+                    elif isinstance(content, str):
+                        # Thử parse bằng ast.literal_eval (cho Python dict string)
+                        try:
+                            tool_content = ast.literal_eval(content)
+                        except (ValueError, SyntaxError):
+                            # Nếu không được, thử json.loads
+                            tool_content = json.loads(content)
+                    else:
+                        continue
+                    
+                    # Nếu có tours trong result, lưu nguyên cục JSON
+                    if "tours" in tool_content and tool_content["tours"]:
+                        print(f"✅ Found tour metadata: {len(tool_content['tours'])} tours")
+                        return tool_content
+                        
+                except Exception as e:
+                    print(f"⚠️ Error parsing tool content: {e}")
+                    continue
+        
+        print("⚠️ No tour metadata found in messages")
+        return None
+    
+    @staticmethod
     def process_chat(chat_id: uuid.UUID, user_message: str) -> dict:
         """
         Xử lý tin nhắn chat từ user
@@ -79,13 +123,36 @@ class ChatbotService:
             # Loại bỏ khoảng trắng thừa
             user_message = user_message.strip()
             
-            # Lấy lịch sử chat
-            chat_history = get_recent_chat_history(chat_id, 6)
+            # Lấy cả lịch sử chat VÀ tour context trong 1 lần query
+            context_data = get_recent_chat_history(chat_id, 10)
+            chat_history = context_data["chat_history"]
+            tour_context = context_data["tour_context"]
             context_message = format_context_message(chat_history)
+            
+            # 📊 LOG: Hiển thị lịch sử chat và tour context
+            print("\n" + "="*80)
+            print("📋 LỊCH SỬ CHAT ĐƯỢC TRUYỀN VÀO AGENT:")
+            print("="*80)
+            if chat_history:
+                for idx, msg in enumerate(chat_history, 1):
+                    role_display = "👤 User" if msg["role"] == "user" else "🤖 Assistant"
+                    print(f"{idx}. {role_display}: {msg['content'][:100]}...")
+            else:
+                print("   (Không có lịch sử)")
+            
+            print("\n" + "="*80)
+            print("🎯 TOUR CONTEXT:")
+            print("="*80)
+            if tour_context:
+                import json
+                print(json.dumps(tour_context, ensure_ascii=False, indent=2)[:500] + "...")
+            else:
+                print("   (Không có tour context)")
+            print("="*80 + "\n")
             
             # Tạo agents
             user_proxy = create_user_proxy_agent()
-            intelligent_coordinator = create_coordinator_agent(context_message)
+            intelligent_coordinator = create_coordinator_agent(context_message, tour_context)
             recommendation_expert = create_recommendation_agent()
             
             # Tạo GroupChat
@@ -109,6 +176,12 @@ class ChatbotService:
             # Trích xuất kết quả
             final_answer = ChatbotService._extract_final_answer(groupchat.messages)
             tour_detail = ChatbotService._extract_tour_detail(groupchat.messages)
+            metadata = ChatbotService._extract_metadata(groupchat.messages)
+            
+            print(f"📊 Metadata extracted: {metadata is not None}")
+            if metadata:
+                print(f"   - Tours found: {len(metadata.get('tours', []))}")
+                print(f"   - Total found: {metadata.get('total_found', 0)}")
             
             # Lưu tin nhắn vào database
             MessageService.create_message(CreateMessagePayload(
@@ -116,11 +189,15 @@ class ChatbotService:
                 content=user_message, 
                 role="user"
             ))
-            MessageService.create_message(CreateMessagePayload(
+            
+            assistant_msg = MessageService.create_message(CreateMessagePayload(
                 chat_id=chat_id, 
                 content=final_answer, 
-                role="assistant"
+                role="assistant",
+                meta_data=metadata
             ))
+            
+            print(f"💾 Assistant message saved with meta_data: {assistant_msg.meta_data is not None}")
             
             return {
                 "reply": final_answer,
