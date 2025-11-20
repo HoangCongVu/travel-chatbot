@@ -12,6 +12,7 @@ from agents.chatbot_agents import (
     CONFIG_LIST,
     create_user_proxy_agent,
     create_coordinator_agent,
+    create_planner_agent,
     create_recommendation_agent
 )
 
@@ -62,7 +63,7 @@ class ChatbotService:
     def _extract_metadata(chat_messages: list) -> dict:
         """
         Trích xuất metadata từ chat messages để lưu vào database
-        Lưu kết quả đầy đủ từ tool call (nguyên cục JSON tour)
+        CHỈ lưu kết quả từ search_tour_chat (KHÔNG lưu search_web_information)
         
         Args:
             chat_messages: List các messages từ groupchat
@@ -70,35 +71,73 @@ class ChatbotService:
         Returns:
             Dict chứa metadata (tour results) hoặc None
         """
-        # Tìm tool result chứa thông tin tour
-        for msg in reversed(chat_messages):            
-            if msg.get("role") == "tool":
-                content = msg.get("content", "{}")
-                
+        for msg in reversed(chat_messages):
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            
+            if role == "tool":
                 try:
-                    # Nếu content đã là dict, sử dụng trực tiếp
+                    # Parse content
                     if isinstance(content, dict):
                         tool_content = content
                     elif isinstance(content, str):
-                        # Thử parse bằng ast.literal_eval (cho Python dict string)
-                        try:
-                            tool_content = ast.literal_eval(content)
-                        except (ValueError, SyntaxError):
-                            # Nếu không được, thử json.loads
-                            tool_content = json.loads(content)
+                        # Content có thể chứa NHIỀU tool responses trên nhiều dòng
+                        # Split by blank lines và parse từng phần
+                        parts = content.split('\n\n')
+                        
+                        parsed_results = []
+                        for part in parts:
+                            part = part.strip()
+                            if not part:
+                                continue
+                            
+                            # Thử parse từng part
+                            try:
+                                parsed_results.append(ast.literal_eval(part))
+                                continue
+                            except (ValueError, SyntaxError):
+                                pass
+                            
+                            try:
+                                parsed_results.append(json.loads(part))
+                                continue
+                            except json.JSONDecodeError:
+                                pass
+                            
+                            try:
+                                parsed_results.append(eval(part))
+                            except Exception:
+                                pass
+                        
+                        # Tìm result có "tours" key (và không có "sources")
+                        if not parsed_results:
+                            continue
+                        
+                        for result in parsed_results:
+                            if isinstance(result, dict):
+                                has_tours = "tours" in result
+                                has_sources = "sources" in result
+                                
+                                if has_tours and not has_sources:
+                                    tool_content = result
+                                    break
+                        else:
+                            continue
                     else:
                         continue
                     
-                    # Nếu có tours trong result, lưu nguyên cục JSON
-                    if "tours" in tool_content and tool_content["tours"]:
-                        print(f"✅ Found tour metadata: {len(tool_content['tours'])} tours")
+                    # CHỈ lấy nếu có key "tours" và tours không rỗng
+                    # BỎ QUA nếu có "sources" (đó là web search, không phải tour search)
+                    has_tours = isinstance(tool_content, dict) and "tours" in tool_content
+                    has_sources = isinstance(tool_content, dict) and "sources" in tool_content
+                    tours_not_empty = has_tours and bool(tool_content.get("tours"))
+                    
+                    if has_tours and tours_not_empty and not has_sources:
                         return tool_content
                         
-                except Exception as e:
-                    print(f"⚠️ Error parsing tool content: {e}")
+                except Exception:
                     continue
         
-        print("⚠️ No tour metadata found in messages")
         return None
     
     @staticmethod
@@ -150,14 +189,15 @@ class ChatbotService:
                 print("   (Không có tour context)")
             print("="*80 + "\n")
             
-            # Tạo agents
+            # Tạo agents với kiến trúc mới (4 agents)
             user_proxy = create_user_proxy_agent()
-            intelligent_coordinator = create_coordinator_agent(context_message, tour_context)
+            intelligent_coordinator = create_coordinator_agent(context_message)  # Lễ tân - chỉ nhận context_message
+            planner_agent = create_planner_agent(context_message, tour_context)  # Nhạc trưởng - nhận cả tour_context
             recommendation_expert = create_recommendation_agent()
             
-            # Tạo GroupChat
+            # Tạo GroupChat với 4 agents
             groupchat = GroupChat(
-                agents=[user_proxy, intelligent_coordinator, recommendation_expert], 
+                agents=[user_proxy, intelligent_coordinator, planner_agent, recommendation_expert], 
                 messages=chat_history,
                 max_round=15,
                 speaker_selection_method="auto",
