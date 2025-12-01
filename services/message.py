@@ -23,3 +23,6 @@ class MessageService:
     @staticmethod
     def get_recent_messages(chat_id: uuid.UUID, limit: int = 20) -> list[MessageModel]:
         return MessageRepository.get_recent_messages(chat_id, limit)
+    
+    def get_chat_messages(chat_id: uuid.UUID) -> list[MessageModel]:
+        return MessageRepository.get_chat_messages(chat_id)

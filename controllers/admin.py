@@ -14,17 +14,17 @@ def create_admin(payload: CreateAdminModel):
     return AdminService.create(payload)
 
 
-@router.get("", response_model=list[AdminModel])
-def get_all_admins():
-    return AdminService.get_all()
+# @router.get("", response_model=list[AdminModel])
+# def get_all_admins():
+#     return AdminService.get_all()
 
 
-@router.get("/{admin_id}", response_model=AdminModel)
-def get_admin_by_id(admin_id: uuid.UUID):
-    admin = AdminService.get(admin_id)
-    if not admin:
-        raise HTTPException(status_code=404, detail="Admin not found")
-    return admin
+# @router.get("/{admin_id}", response_model=AdminModel)
+# def get_admin_by_id(admin_id: uuid.UUID):
+#     admin = AdminService.get(admin_id)
+#     if not admin:
+#         raise HTTPException(status_code=404, detail="Admin not found")
+#     return admin
 
 
 @router.put("/{admin_id}", response_model=AdminModel)

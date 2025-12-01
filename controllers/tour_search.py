@@ -142,3 +142,58 @@ def search_tour_chat(
         "search_criteria": results["search_criteria"],
         "data": results
     }
+
+@router.get("/search-by-fields/")
+def search_tour_by_fields(
+    tour_type_id: int = Query(None, description="ID loại tour"),
+    destination: str = Query(None, description="Điểm đến (VD: Đà Lạt, Singapore) - tìm bằng embedding"),
+    departure: str = Query(None, description="Điểm khởi hành (VD: Hà Nội, TP.HCM) - tìm bằng embedding"),
+    target_date: date = Query(None, description="Ngày khởi hành (VD: 2025-07-15)"),
+    limit: int = Query(5, description="Số lượng tour tối đa", ge=1, le=20)
+):
+    """
+    API tìm kiếm tour với các điều kiện kết hợp (tương tự search_tour_chat).
+    
+    Có thể tìm kiếm theo:
+    - tour_type_id: ID loại tour
+    - destination: Tên địa điểm đích (tìm bằng embedding)
+    - departure: Tên điểm khởi hành (tìm bằng embedding)
+    - target_date: Ngày khởi hành
+    - Hoặc kết hợp nhiều điều kiện
+    
+    Ví dụ:
+    - /search-by-fields/?tour_type_id=1
+    - /search-by-fields/?destination=Đà Lạt
+    - /search-by-fields/?departure=Hà Nội
+    - /search-by-fields/?target_date=2025-07-15
+    - /search-by-fields/?tour_type_id=1&departure=Hà Nội&destination=Đà Lạt&target_date=2025-07-15
+    """
+    # Kiểm tra ít nhất một điều kiện được cung cấp
+    if not any([tour_type_id, destination, departure, target_date]):
+        raise HTTPException(
+            status_code=400, 
+            detail="Vui lòng cung cấp ít nhất một điều kiện tìm kiếm (tour_type_id, destination, departure, hoặc target_date)"
+        )
+    
+    results = TourSearchService.search_tour_by_fields(
+        tour_type_id=tour_type_id,
+        destination=destination,
+        departure=departure,
+        target_date=target_date,
+        limit=limit
+    )
+
+    if not results.get("tours"):
+        return {
+            "status": "not_found",
+            "message": results.get("message", "Không tìm thấy tour phù hợp"),
+            "search_criteria": results.get("search_criteria"),
+            "data": {"tours": []}
+        }
+
+    return {
+        "status": "success",
+        "total_found": results["total_found"],
+        "search_criteria": results["search_criteria"],
+        "data": results
+    }

@@ -44,3 +44,11 @@ def get_recent_messages(chat_id: uuid.UUID, limit: int = 20):
         return messages
     except Exception:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Messages not found")
+
+@router.get("/{chat_id}", response_model=list[MessageModel])
+def get_chat_messages(chat_id: uuid.UUID):
+    try:
+        messages = MessageService.get_chat_messages(chat_id)
+        return messages
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Messages not found")

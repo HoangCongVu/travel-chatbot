@@ -35,3 +35,7 @@ class ChatService:
         ✅ Tìm chat theo platform và external_user_id
         """
         return ChatRepository.find_by_platform_and_external_id(platform, external_id)
+    
+    @staticmethod
+    def get_all_chats() -> list[ChatModel]:
+        return ChatRepository.get_all_chat()

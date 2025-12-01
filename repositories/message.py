@@ -64,3 +64,9 @@ class MessageRepository:
             )
             revert_rs = rs[::-1]
             return [MessageModel.model_validate(message) for message in revert_rs]
+    
+    @staticmethod
+    def get_chat_messages(chat_id: uuid.UUID) -> list[MessageModel]:
+        with Session() as session:
+            messages = session.query(Message).filter(Message.chat_id == chat_id).all()
+            return [MessageModel.model_validate(message) for message in messages]

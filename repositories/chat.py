@@ -84,3 +84,9 @@ class ChatRepository:
             if chat:
                 return ChatModel.model_validate(chat)
             return None
+    
+    @staticmethod
+    def get_all_chat() -> list[ChatModel]:
+        with Session() as session:
+            chats = session.query(Chat).all()
+            return [ChatModel.model_validate(chat) for chat in chats]

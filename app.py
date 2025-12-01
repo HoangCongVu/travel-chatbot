@@ -10,6 +10,7 @@ upload_file_agent,
 chatbot,
 user,
 chat,
+message,
 tour_type,
 tour,
 visa_price,
@@ -24,6 +25,7 @@ specific_departure,
 agent_tour,
 tour_search,
 facebook_webhook,
+follow_up_settings
 )
 
 def create_app() -> FastAPI:
@@ -64,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(chatbot.router, prefix="/api")
     app.include_router(user.router, prefix="/api")
     app.include_router(chat.router, prefix="/api")
+    app.include_router(message.router, prefix="/api")
     app.include_router(tour_type.router, prefix="/api")
     app.include_router(tour.router, prefix="/api")
     app.include_router(visa_price.router, prefix="/api")
@@ -77,7 +80,8 @@ def create_app() -> FastAPI:
     app.include_router(specific_departure.router, prefix="/api")
     app.include_router(agent_tour.router, prefix="/api")
     app.include_router(tour_search.router, prefix="/api")
-    app.include_router(facebook_webhook.router)  # Không có prefix để match /webhook
+    app.include_router(facebook_webhook.router) 
+    app.include_router(follow_up_settings.router, prefix="/api")
     return app
 
 
