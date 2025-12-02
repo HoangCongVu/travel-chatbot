@@ -4,10 +4,12 @@ Service xử lý business logic cho chatbot
 import json
 import ast
 import uuid
+import asyncio
 from autogen import GroupChat, GroupChatManager
 from services.message import MessageService
 from models.message import CreateMessagePayload
 from utils.chat_history import get_recent_chat_history, format_context_message
+from utils.socket_manager import emit_socket_safely
 from agents.chatbot_agents import (
     CONFIG_LIST,
     create_user_proxy_agent,
@@ -223,19 +225,24 @@ class ChatbotService:
                 print(f"   - Tours found: {len(metadata.get('tours', []))}")
                 print(f"   - Total found: {metadata.get('total_found', 0)}")
             
-            # Lưu tin nhắn vào database
-            MessageService.create_message(CreateMessagePayload(
-                chat_id=chat_id, 
-                content=user_message, 
-                role="user"
-            ))
-            
+            # ⚠️ KHÔNG tạo user message ở đây - đã tạo ở chatbot controller
+            # Chỉ lưu assistant message
             assistant_msg = MessageService.create_message(CreateMessagePayload(
                 chat_id=chat_id, 
                 content=final_answer, 
                 role="assistant",
                 meta_data=metadata
             ))
+            
+            # 🔥 Emit socket event cho assistant message
+            emit_socket_safely(str(chat_id), {
+                "message_id": str(assistant_msg.id),
+                "chat_id": str(chat_id),
+                "content": final_answer,
+                "role": "assistant",
+                "created_at": assistant_msg.created_at.isoformat() if assistant_msg.created_at else None,
+                "meta_data": metadata
+            })
             
             print(f"💾 Assistant message saved with meta_data: {assistant_msg.meta_data is not None}")
             
@@ -248,16 +255,24 @@ class ChatbotService:
             error_message = "Xin lỗi, hệ thống đang gặp sự cố. Vui lòng thử lại sau."
             
             try:
-                MessageService.create_message(CreateMessagePayload(
-                    chat_id=chat_id, 
-                    content=user_message, 
-                    role="user"
-                ))
-                MessageService.create_message(CreateMessagePayload(
+                # ⚠️ KHÔNG tạo user message - đã tạo ở chatbot controller
+                # Chỉ lưu error message
+                error_msg = MessageService.create_message(CreateMessagePayload(
                     chat_id=chat_id, 
                     content=error_message, 
                     role="assistant"
                 ))
+                
+                # 🔥 Emit socket event cho error message
+                emit_socket_safely(str(chat_id), {
+                    "message_id": str(error_msg.id),
+                    "chat_id": str(chat_id),
+                    "content": error_message,
+                    "role": "assistant",
+                    "created_at": error_msg.created_at.isoformat() if error_msg.created_at else None,
+                    "meta_data": error_msg.meta_data
+                })
+                    
             except Exception as db_error:
                 print(f"⚠️ Lỗi lưu tin nhắn: {str(db_error)}")
             

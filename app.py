@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
+import socketio
 import alembic.config
 from env import env
 from app_environment import AppEnvironment
@@ -27,6 +28,7 @@ tour_search,
 facebook_webhook,
 follow_up_settings
 )
+from utils.socket_manager import sio
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -82,6 +84,14 @@ def create_app() -> FastAPI:
     app.include_router(tour_search.router, prefix="/api")
     app.include_router(facebook_webhook.router) 
     app.include_router(follow_up_settings.router, prefix="/api")
+    
+    # 🔥 Mount Socket.IO vào FastAPI (support fastapi dev)
+    socket_asgi_app = socketio.ASGIApp(
+        socketio_server=sio,
+        socketio_path=""  # Empty vì đã mount tại /socket.io
+    )
+    app.mount("/socket.io", socket_asgi_app)
+    
     return app
 
 

@@ -1,14 +1,30 @@
 from fastapi import APIRouter, HTTPException, status
 from models.message import CreateMessagePayload, UpdateMessagePayload, MessageModel
 from services.message import MessageService
+from utils.socket_manager import emit_new_message
 import uuid
 
 router = APIRouter(prefix="/messages", tags=["Messages"])
 
 
 @router.post("", response_model=MessageModel, status_code=status.HTTP_201_CREATED)
-def create_message(payload: CreateMessagePayload):
-    return MessageService.create_message(payload)
+async def create_message(payload: CreateMessagePayload):
+    message = MessageService.create_message(payload)
+    
+    # 🔥 Emit socket event để notify real-time
+    try:
+        await emit_new_message(str(payload.chat_id), {
+            "message_id": str(message.id),
+            "chat_id": str(message.chat_id),
+            "content": message.content,
+            "role": message.role,
+            "created_at": message.created_at.isoformat() if message.created_at else None,
+            "meta_data": message.meta_data
+        })
+    except Exception as socket_error:
+        print(f"⚠️ Socket emit failed: {socket_error}")
+    
+    return message
 
 
 @router.get("", response_model=MessageModel)

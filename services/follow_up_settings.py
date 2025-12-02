@@ -17,6 +17,7 @@ from repositories.chat import ChatRepository
 from repositories.follow_up_settings import FollowUpSettingsRepository
 from agents.follow_up_agents import FollowUpConfig
 from utils.facebook_messenger import send_facebook_message
+from utils.socket_manager import emit_socket_safely
 from env import env
 
 # Global OpenAI client
@@ -230,6 +231,19 @@ class FollowUpService:
             
             # 4. Lưu vào database
             new_message = MessageRepository.create(message_payload)
+            
+            # 🔥 Emit socket event cho follow-up message real-time
+            emit_socket_safely(str(chat_id), {
+                "message_id": str(new_message.id),
+                "chat_id": str(chat_id),
+                "content": content,
+                "role": "assistant",
+                "created_at": new_message.created_at.isoformat() if new_message.created_at else None,
+                "meta_data": {
+                    "is_follow_up": True,
+                    "strategy": strategy
+                }
+            })
             
             # 5. Gửi lên platform tương ứng (Facebook, Zalo, etc.)
             if chat.platform == "facebook" and chat.external_user_id:

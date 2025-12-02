@@ -25,15 +25,25 @@ Dự án này là một chatbot hỗ trợ tư vấn du lịch, xây dựng vớ
 
 ## Chạy ứng dụng
 
+### Chạy với Socket.IO (Real-time Chat) - Khuyến nghị ⚡
+
+```sh
+poetry run uvicorn app:socket_app --reload --host 0.0.0.0 --port 8000
+```
+
+### Chạy không có Socket.IO (REST API only)
+
 ```sh
 poetry run fastapi dev app.py
 ```
 
-Hoặc chạy bằng Uvicorn:
+Hoặc:
 
 ```sh
 poetry run uvicorn app:app --reload
 ```
+
+> **⚠️ Lưu ý**: Để sử dụng tính năng chat real-time, bạn **PHẢI** chạy với `app:socket_app`
 
 ## Quản lý database
 

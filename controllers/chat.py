@@ -9,6 +9,7 @@ import uuid
 from uuid import uuid4, UUID
 from middleware.auth import get_current_user, get_current_admin
 from utils.facebook_messenger import send_facebook_message
+from utils.socket_manager import emit_new_message, emit_chat_update
 
 router = APIRouter(prefix="/chats", tags=["Chats"])
 
@@ -102,7 +103,7 @@ def get_all_chats():
     return chats
 
 @router.post("/{chat_id}/admin-message")
-def send_admin_message(
+async def send_admin_message(
     chat_id: uuid.UUID,
     payload: AdminMessageRequest,
     current_admin: str = Depends(get_current_admin)
@@ -138,11 +139,22 @@ def send_admin_message(
 
     if chat.platform == "facebook" and chat.external_user_id:
         try:
-            delivery_result = asyncio.run(
-                send_facebook_message(chat.external_user_id, content)
-            )
+            delivery_result = await send_facebook_message(chat.external_user_id, content)
         except Exception as send_error:
             delivery_result = {"status": "failed", "error": str(send_error)}
+
+    # 🔥 Emit socket event để notify real-time
+    try:
+        await emit_new_message(str(chat_id), {
+            "message_id": str(message.id),
+            "chat_id": str(chat_id),
+            "content": content,
+            "role": "admin",
+            "created_at": message.created_at.isoformat() if message.created_at else None,
+            "meta_data": message.meta_data
+        })
+    except Exception as socket_error:
+        print(f"⚠️ Socket emit failed: {socket_error}")
 
     return {
         "status": "success",
