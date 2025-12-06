@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column
 from pydantic import BaseModel, ConfigDict
 import uuid
 import sqlalchemy as sa
-from models.user import UserTable
 from db import Base
 
 
@@ -30,7 +29,7 @@ class Chat(Base):
 class CreateChatPayload(BaseModel):
     user_id: Optional[uuid.UUID] = None
     title: str 
-    session_id: Optional[uuid.UUID] = None  # Optional, sẽ tự động tạo nếu không có
+    session_id: Optional[uuid.UUID] = None  
     platform: Optional[str] = None
     external_user_id: Optional[str] = None
 

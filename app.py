@@ -26,7 +26,12 @@ specific_departure,
 agent_tour,
 tour_search,
 facebook_webhook,
-follow_up_settings
+follow_up_settings,
+carts,
+cart_items,
+bookings,
+payments,
+payment_webhook
 )
 from utils.socket_manager import sio
 
@@ -84,6 +89,11 @@ def create_app() -> FastAPI:
     app.include_router(tour_search.router, prefix="/api")
     app.include_router(facebook_webhook.router) 
     app.include_router(follow_up_settings.router, prefix="/api")
+    app.include_router(carts.router, prefix="/api")
+    app.include_router(cart_items.router, prefix="/api")
+    app.include_router(bookings.router, prefix="/api")
+    app.include_router(payments.router, prefix="/api")
+    app.include_router(payment_webhook.router, prefix="/api")
     
     # 🔥 Mount Socket.IO vào FastAPI (support fastapi dev)
     socket_asgi_app = socketio.ASGIApp(
