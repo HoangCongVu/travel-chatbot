@@ -20,6 +20,9 @@ class ChatPayload(BaseModel):
 class AdminMessageRequest(BaseModel):
     content: str
 
+class StaffMessageRequest(BaseModel):
+    content: str
+
 # Payload khi tạo chat chưa đăng nhập (ẩn danh)
 # class AnonymousChatPayload(BaseModel):
 #     title: str
@@ -150,6 +153,68 @@ async def send_admin_message(
             "chat_id": str(chat_id),
             "content": content,
             "role": "admin",
+            "created_at": message.created_at.isoformat() if message.created_at else None,
+            "meta_data": message.meta_data
+        })
+    except Exception as socket_error:
+        print(f"⚠️ Socket emit failed: {socket_error}")
+
+    return {
+        "status": "success",
+        "data": {
+            "message": message,
+            "delivery": delivery_result
+        }
+    }
+
+@router.post("/{chat_id}/staff-message")
+async def send_staff_message(
+    chat_id: uuid.UUID,
+    payload: StaffMessageRequest,
+    current_admin: str = Depends(get_current_admin)
+) -> dict:
+    """Cho phép staff gửi tin nhắn trực tiếp đến user trong chat."""
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Message content cannot be empty")
+
+    try:
+        admin_uuid = uuid.UUID(current_admin)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid staff credentials")
+
+    try:
+        chat = ChatService.get_chat(chat_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    message = MessageService.create_message(
+        CreateMessagePayload(
+            chat_id=chat_id,
+            content=content,
+            role="staff",
+            meta_data={
+                "sender": "staff",
+                "staff_id": str(admin_uuid)
+            }
+        )
+    )
+
+    delivery_result = {"status": "skipped", "reason": "No external channel"}
+
+    if chat.platform == "facebook" and chat.external_user_id:
+        try:
+            delivery_result = await send_facebook_message(chat.external_user_id, content)
+        except Exception as send_error:
+            delivery_result = {"status": "failed", "error": str(send_error)}
+
+    # 🔥 Emit socket event để notify real-time
+    try:
+        await emit_new_message(str(chat_id), {
+            "message_id": str(message.id),
+            "chat_id": str(chat_id),
+            "content": content,
+            "role": "staff",
             "created_at": message.created_at.isoformat() if message.created_at else None,
             "meta_data": message.meta_data
         })

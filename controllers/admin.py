@@ -10,7 +10,14 @@ def login_admin(login_data: AdminLoginModel):
     return AdminService.login(login_data)
 
 @router.post("", response_model=AdminModel)
-def create_admin(payload: CreateAdminModel): 
+def create_admin(payload: CreateAdminModel):
+    """
+    Create a new admin user.
+    
+    Roles available:
+    - admin: Full administrative privileges
+    - staff: Limited staff privileges (default)
+    """
     return AdminService.create(payload)
 
 
@@ -18,6 +25,12 @@ def create_admin(payload: CreateAdminModel):
 # def get_all_admins():
 #     return AdminService.get_all()
 
+@router.get("/staff", response_model=list[AdminModel])
+def get_staff_admins():
+    """
+    Get all admin users with staff role.
+    """
+    return AdminService.get_staff_admins()
 
 # @router.get("/{admin_id}", response_model=AdminModel)
 # def get_admin_by_id(admin_id: uuid.UUID):
@@ -35,7 +48,7 @@ def update_admin(admin_id: uuid.UUID, payload: UpdateAdminModel):
     return updated_admin
 
 
-@router.delete("/{admin_id}")
+@router.delete("/staff/{admin_id}")
 def delete_admin(admin_id: uuid.UUID):
     success = AdminService.delete(admin_id)
     if not success:

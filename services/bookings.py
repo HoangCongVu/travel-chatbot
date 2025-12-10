@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from models.bookings import BookingModel, BookingCreateModel, BookingUpdateModel
+from models.bookings import BookingModel, BookingCreateModel, BookingUpdateModel, BookingWithCartItemModel
 from repositories.bookings import BookingRepository
 from repositories.cart_items import CartItemRepository
 from repositories.carts import CartRepository
@@ -24,9 +24,15 @@ class BookingService:
         # Tạo booking cho mỗi cart_item
         bookings = []
         for item in cart_items:
-            # Tính total_price = price_snapshot * quantity * (adult + child)
-            total_people = checkout_data.get("adult_count", 1) + checkout_data.get("child_count", 0)
-            total_price = float(item.price_snapshot) * item.quantity * total_people
+            # Tính total_price với giảm giá 30% cho trẻ em
+            adult_count = checkout_data.get("adult_count", 1)
+            child_count = checkout_data.get("child_count", 0)
+            price_per_unit = float(item.price_snapshot) * item.quantity
+            
+            # Adult: full price, Child: 70% price (discount 30%)
+            adult_price = price_per_unit * adult_count
+            child_price = price_per_unit * child_count * 0.7
+            total_price = adult_price + child_price
             
             booking_data = BookingCreateModel(
                 user_id=checkout_data.get("user_id"),
@@ -45,10 +51,6 @@ class BookingService:
             )
             booking = BookingRepository.create(booking_data)
             bookings.append(booking)
-        
-        # KHÔNG xóa cart - giữ lại để tra cứu lịch sử
-        # Cart sẽ được xóa thủ công hoặc bởi scheduled task
-        # CartRepository.delete(cart_id)
         
         return bookings
     
@@ -99,11 +101,6 @@ class BookingService:
         return BookingRepository.update(booking_id, payload)
 
     @staticmethod
-    def delete(booking_id: uuid.UUID) -> bool:
-        """Soft delete booking"""
-        return BookingRepository.delete(booking_id)
-
-    @staticmethod
     def hard_delete(booking_id: uuid.UUID) -> bool:
         """Hard delete booking (xóa vĩnh viễn)"""
         return BookingRepository.hard_delete(booking_id)
@@ -127,3 +124,9 @@ class BookingService:
             "cancelled": BookingRepository.count_by_status("cancelled"),
             "completed": BookingRepository.count_by_status("completed")
         }
+
+    @staticmethod
+    def get_chatbot_bookings(skip: int = 0, limit: int = 100) -> List[BookingWithCartItemModel]:
+        """Lấy tất cả bookings từ chatbot kèm cart items"""
+        return BookingRepository.get_chatbot_bookings(skip, limit)
+

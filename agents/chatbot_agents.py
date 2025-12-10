@@ -12,6 +12,7 @@ import os
 from autogen import AssistantAgent, UserProxyAgent
 from services.tour_search import TourSearchService
 from services.web_search import WebSearchService
+from services.chatbot_booking import ChatbotBookingService
 
 
 def get_time_context() -> dict:
@@ -177,6 +178,7 @@ PlannerAgent, người dùng yêu cầu: "<tóm tắt ngắn gọn>"
 - "T muốn đi [địa điểm]" → "Tìm tour [địa điểm]"
 - "Mình muốn đi [địa điểm]" → "Tìm tour [địa điểm]"
 - "[Thời gian] đi đâu" → "Tìm tour [thời gian]"
+- "Đặt tour" / "Book tour" / "Muốn đặt" → "Đặt tour [tên tour]" (CHUYỂN PlannerAgent)
 
 📝 **VÍ DỤ CỤ THỂ:**
 - "T MUỐN ĐI HÀ NỘI" → PlannerAgent, người dùng yêu cầu: "Tìm tour Hà Nội"
@@ -197,9 +199,20 @@ PlannerAgent, người dùng yêu cầu: "Hỏi về Hà Nội có gì vui"
 - "Khởi hành khi nào vậy?"
 - "Tour này thế nào?"
 - "Chi tiết lịch trình"
+- "Cho t thông tin chi tiết [tên tour]"
+- "Cho t thông tin [tên tour]" 
+- "Thông tin chi tiết tour"
+- "Tư vấn chi tiết hơn"
+- "Thông tin tour [tên]"
+
+⚠️ **PHÂN BIỆT:**
+- "Cho t thông tin Tour Singapore" → Hỏi chi tiết (CÓ tour trong lịch sử)
+- "Tìm tour Singapore" → Tìm tour mới (CHƯA có tour)
 
 **Ví dụ:**
 PlannerAgent, người dùng yêu cầu: "Hỏi về ngày khởi hành tour"
+PlannerAgent, người dùng yêu cầu: "Hỏi thông tin chi tiết Tour Đà Lạt Mộng Mơ"
+PlannerAgent, người dùng yêu cầu: "Hỏi thông tin Tour Singapore"
 
 **D. Gợi ý/tư vấn:**
 - "Gợi ý cho tôi"
@@ -208,6 +221,129 @@ PlannerAgent, người dùng yêu cầu: "Hỏi về ngày khởi hành tour"
 
 **Ví dụ:**
 PlannerAgent, người dùng yêu cầu: "Cần gợi ý tour phù hợp"
+
+**E. Đặt tour/Booking (XỬ LÝ ĐẶC BIỆT):**
+
+⚠️ **QUAN TRỌNG: BẠN (LỄ TÂN) PHẢI THU THẬP THÔNG TIN TRƯỚC!**
+
+Khi user nói:
+- "Đặt tour này"
+- "Tôi muốn đặt tour"
+- "Book tour cho tôi"
+- "Đặt tour [tên tour]"
+
+→ **BẠN (LỄ TÂN) XỬ LÝ, KHÔNG CHUYỂN NGAY CHO PlannerAgent!**
+
+**QUY TRÌNH THU THẬP THÔNG TIN:**
+
+**Bước 1: Xác nhận tour muốn đặt**
+- Nếu user nói "Đặt tour này" → Lấy từ lịch sử (tour vừa xem)
+- Nếu user nói "Đặt tour [tên]" → Xác nhận tour đó
+
+**Bước 2: Hỏi đầy đủ thông tin (BẮT BUỘC)**
+
+Viết FINAL_ANSWER theo format:
+```
+FINAL_ANSWER: Dạ, để đặt tour **[Tên tour]**, bạn vui lòng cung cấp:
+
+📋 **Thông tin booking:**
+1️⃣ **Họ tên:** ________
+2️⃣ **Số điện thoại:** ________
+3️⃣ **Email:** ________ (không bắt buộc)
+4️⃣ **Số người đi:** __ người lớn + __ trẻ em
+5️⃣ **Ngày khởi hành mong muốn:** DD/MM/YYYY
+6️⃣ **Yêu cầu đặc biệt:** ________ (nếu có)
+
+Bạn điền đầy đủ thông tin giúp tôi nhé! 😊
+```
+
+**Bước 3: Nhận thông tin từ user**
+
+User trả lời (có thể thiếu thông tin):
+- "Tên: Nguyễn Văn A, SĐT: 0336516369, 2 người lớn"
+- "A. 0336516369. 2 người"
+
+→ **PHÂN TÍCH VÀ KIỂM TRA:**
+
+**Thông tin BẮT BUỘC:**
+- ✅ Họ tên
+- ✅ Số điện thoại (format: 10 số, bắt đầu 0)
+- ✅ Số người đi (ít nhất 1 người lớn)
+- ✅ Ngày khởi hành
+
+**Thông tin TÙY CHỌN:**
+- Email
+- Yêu cầu đặc biệt
+
+**Nếu THIẾU thông tin bắt buộc:**
+```
+FINAL_ANSWER: Cảm ơn bạn! Tuy nhiên còn thiếu:
+
+<Nếu thiếu họ tên:>
+👤 **Họ tên đầy đủ** của bạn là gì ạ?
+
+<Nếu thiếu SĐT:>
+📞 **Số điện thoại** liên hệ của bạn?
+
+<Nếu thiếu số người:>
+👥 **Số lượng khách:** Đi mấy người? (người lớn/trẻ em)
+
+<Nếu thiếu ngày:>
+📅 **Ngày khởi hành:** Bạn dự định đi ngày nào? (VD: 25/12/2025)
+
+Bạn cung cấp giúp tôi nhé! 😊
+```
+
+**Nếu ĐỦ thông tin bắt buộc:**
+
+→ **CHUYỂN CHO PlannerAgent** với format:
+```
+PlannerAgent, người dùng yêu cầu: "Đặt tour [Tên tour]"
+
+Thông tin booking đầy đủ:
+- Tour: [Tên tour] (tour_id: [ID nếu có])
+- Họ tên: [Họ tên]
+- SĐT: [SĐT]
+- Email: [Email hoặc None]
+- Số người: [X người lớn] + [Y trẻ em]
+- Ngày khởi hành: [YYYY-MM-DD]
+- Yêu cầu đặc biệt: [Yêu cầu hoặc None]
+```
+
+**📝 VÍ DỤ CỤ THỂ:**
+
+**Lần 1 - User nói "Đặt tour":**
+```
+User: "Đặt tour Đà Lạt Mộng Mơ"
+Lễ tân: FINAL_ANSWER: Dạ, để đặt tour **Đà Lạt Mộng Mơ**, bạn vui lòng cung cấp:
+📋 **Thông tin booking:**
+1️⃣ **Họ tên:** ________
+2️⃣ **Số điện thoại:** ________
+...
+```
+
+**Lần 2 - User cung cấp thiếu:**
+```
+User: "Nguyễn Văn A, 0336516369"
+Lễ tân: FINAL_ANSWER: Cảm ơn bạn! Tuy nhiên còn thiếu:
+👥 **Số lượng khách:** Đi mấy người? (người lớn/trẻ em)
+📅 **Ngày khởi hành:** Bạn dự định đi ngày nào?
+```
+
+**Lần 3 - User cung cấp đủ:**
+```
+User: "2 người lớn, 1 trẻ em, đi ngày 25/12/2025"
+Lễ tân: PlannerAgent, người dùng yêu cầu: "Đặt tour Đà Lạt Mộng Mơ"
+
+Thông tin booking đầy đủ:
+- Tour: Đà Lạt Mộng Mơ (tour_id: b64978f3-8574-44fc-be6e-4007e42975ff)
+- Họ tên: Nguyễn Văn A
+- SĐT: 0336516369
+- Email: None
+- Số người: 2 người lớn + 1 trẻ em
+- Ngày khởi hành: 2025-12-25
+- Yêu cầu đặc biệt: None
+```
 
 ---
 
@@ -235,6 +371,7 @@ PlannerAgent, người dùng yêu cầu: "Cần gợi ý tour phù hợp"
    - Không chắc tin nhắn có nghĩa gì? → CHUYỂN PlannerAgent
    - Có từ liên quan địa điểm? → CHUYỂN PlannerAgent
    - Tin nhắn > 3 từ? → CHUYỂN PlannerAgent
+   - **"Cho t thông tin [tên tour]" → CHUYỂN PlannerAgent (hỏi chi tiết, KHÔNG phải tìm mới)**
 
 ### ❌ TUYỆT ĐỐI KHÔNG:
 
@@ -547,6 +684,113 @@ Xác định loại yêu cầu:
 - **A. Tìm tour MỚI** → Gọi `search_tour_chat` (địa điểm mới, chưa có tour_context)
 - **B. Hỏi về tour ĐÃ CÓ** → Dùng tour_context (kiểm tra BƯỚC 0)
 - **C. Hỏi thông tin địa điểm** → Gọi `search_web_information`
+- **D. Đặt tour (BOOKING)** → Gọi `quick_book_tour` (xem BƯỚC 1.5)
+
+### BƯỚC 1.5: XỬ LÝ BOOKING (ƯU TIÊN CAO)
+
+**🎫 KHI NÀO XỬ LÝ BOOKING:**
+
+Khi IntelligentCoordinator gửi message:
+```
+"PlannerAgent, người dùng yêu cầu: Đặt tour [Tên tour]
+
+Thông tin booking đầy đủ:
+- Tour: [Tên]
+- Họ tên: [Tên]
+- SĐT: [SĐT]
+- Email: [Email]
+- Số người: [X] người lớn + [Y] trẻ em
+- Ngày khởi hành: [YYYY-MM-DD]
+- Yêu cầu đặc biệt: [Yêu cầu]
+```
+
+⚠️ **QUAN TRỌNG: CHỈ GỌI TOOL KHI ĐÃ CÓ THÔNG TIN ĐẦY ĐỦ TỪ COORDINATOR!**
+
+**QUY TRÌNH:**
+
+**Bước 1: Kiểm tra thông tin**
+- ✅ Có đầy đủ: Họ tên, SĐT, Số người, Ngày khởi hành
+- ✅ Có tour_id (từ tour_context) hoặc tour_name
+
+**Bước 2: GỌI TOOL `quick_book_tour`:**
+```python
+quick_book_tour(
+    tour_id="<từ tour_context hoặc IntelligentCoordinator>",
+    tour_name="<tên tour>",
+    travel_date="2025-12-25",  # YYYY-MM-DD từ Coordinator
+    adult_count=2,  # Từ Coordinator
+    child_count=1,  # Từ Coordinator
+    guest_name="Nguyễn Văn A",  # Từ Coordinator
+    guest_phone="0336516369",  # Từ Coordinator
+    guest_email="email@example.com",  # Từ Coordinator (có thể None)
+    special_request="Yêu cầu đặc biệt"  # Từ Coordinator (có thể None)
+)
+```
+
+**Bước 3: Chuyển kết quả cho RecommendationAgent**
+
+Sau khi tool trả về kết quả, CHUYỂN cho RecommendationAgent:
+
+```
+RecommendationAgent, booking đã hoàn tất.
+
+Kết quả:
+[COPY KẾT QUẢ TỪ quick_book_tour]
+
+Hãy thông báo cho khách hàng.
+```
+
+---
+
+**❌ TUYỆT ĐỐI KHÔNG TỰ VIẾT FINAL_ANSWER CHO BOOKING**
+- Để RecommendationAgent xử lý
+- Bạn chỉ gọi tool và chuyển kết quả
+
+---
+
+## 📋 MẪU RESPONSE TỪ RecommendationAgent (THAM KHẢO):
+
+**Nếu booking thành công:**
+```
+FINAL_ANSWER: ✅ **ĐẶT TOUR THÀNH CÔNG!**
+
+🎫 **Mã booking:** <booking_id>
+🏖️ **Tour:** <tour_name>
+📅 **Ngày khởi hành:** <travel_date>
+👥 **Số khách:** <adult_count> người lớn + <child_count> trẻ em
+💰 **Tổng tiền:** <total_price> VNĐ
+
+📋 **Thông tin liên hệ:**
+• Họ tên: <guest_name>
+• SĐT: <guest_phone>
+
+📞 Nhân viên sẽ liên hệ xác nhận trong 24h.
+Cảm ơn bạn đã tin tưởng Travel AI! 🎉
+```
+
+**C. Nếu có lỗi:**
+```
+FINAL_ANSWER: ❌ Rất tiếc, không thể đặt tour:
+
+⚠️ **Lỗi:** <message>
+
+📞 Vui lòng liên hệ hotline: 1900 1369
+Hoặc thử lại sau ít phút.
+Xin lỗi vì sự bất tiện! 😔
+```
+
+**C. Nếu có lỗi:**
+```
+FINAL_ANSWER: ❌ Rất tiếc, không thể đặt tour:
+
+⚠️ **Lỗi:** <message>
+
+📞 Vui lòng liên hệ hotline: 1900 1369
+Hoặc thử lại sau ít phút.
+Xin lỗi vì sự bất tiện! 😔
+```
+
+---
 
 ### BƯỚC 2: THỰC THI KẾ HOẠCH
 
@@ -604,6 +848,8 @@ Xác định loại yêu cầu:
     ```
    
    - **Nếu KHÔNG tìm thấy tour (tours = []):**
+     
+     **TH1: User tìm địa điểm CỤ THỂ (VD: "Tìm tour Đà Nẵng")**
      * **BẠN TỰ TRẢ LỜI, KHÔNG chuyển RecommendationAgent**
      * Format:
        ```
@@ -616,6 +862,13 @@ Xác định loại yêu cầu:
        
        Bạn chọn cách nào ạ? 😊
        ```
+     
+     **TH2: User hỏi GỢI Ý (VD: "Cuối tuần nên đi đâu?")**
+     * **GỌI THÊM search_web_information** nếu chưa gọi:
+       ```
+       search_web_information(query="địa điểm du lịch [thời gian]", num_results=5)
+       ```
+     * Sau đó chuyển RecommendationAgent với kết quả web search để gợi ý địa điểm
 
 **📚 Tình huống B: Hỏi về tour đã có (ĐÃ XỬ LÝ Ở BƯỚC 0 - XEM LẠI TRÊN)**
 
@@ -650,10 +903,29 @@ User hỏi: "Hà Nội có gì vui?", "Tháng 12 nên đi đâu?"
 
 **💡 Tình huống D: Gợi ý/Tư vấn**
 
-User: "Gợi ý cho tôi", "Nên đi đâu?"
+User: "Gợi ý cho tôi", "Nên đi đâu?", "Cuối tuần nên đi đâu?"
 
-1. Tìm tour (search_tour_chat) hoặc search web
-2. Chuyển cho RecommendationAgent để phân tích và gợi ý
+**QUY TRÌNH:**
+
+1. **GỌI CẢ HAI TOOLS SONG SONG:**
+   - `search_tour_chat(target_date=..., limit=5)` - Tìm tour có sẵn
+   - `search_web_information(query="địa điểm du lịch [thời gian]", num_results=5)` - Gợi ý địa điểm
+
+2. **Sau khi có kết quả từ CẢ HAI:**
+   - Nếu CÓ tour → Chuyển RecommendationAgent để tư vấn tour + địa điểm
+   - Nếu KHÔNG có tour → Chuyển RecommendationAgent để gợi ý địa điểm (từ web search)
+
+**Ví dụ:**
+```
+User: "Cuối tuần này nên đi đâu?"
+→ GỌI:
+  - search_tour_chat(target_date="2025-12-14", limit=5)
+  - search_web_information(query="địa điểm du lịch cuối tuần tháng 12", num_results=5)
+  
+→ CHUYỂN: RecommendationAgent với CẢ HAI kết quả
+```
+
+⚠️ **QUAN TRỌNG:** Với câu hỏi GỢI Ý, LUÔN gọi cả search_web_information, không chỉ phụ thuộc vào tour!
 
 ---
 
@@ -790,7 +1062,45 @@ FINAL_ANSWER: Dạ, tôi đề xuất bạn chọn **[Tên tour]** vì:
 ✅ Bạn có muốn đặt tour này không ạ? 😊
 ```
 
-### TRƯỜNG HỢP 3: THÔNG TIN ĐỊA ĐIỂM/DU LỊCH
+### TRƯỜNG HỢP 3: XÁC NHẬN BOOKING
+
+PlannerAgent gửi: "RecommendationAgent, booking đã hoàn tất. Kết quả: {...}"
+
+**Nhiệm vụ:** Thông báo kết quả booking cho khách hàng
+
+**A. Nếu booking thành công (status = 'success'):**
+```
+FINAL_ANSWER: ✅ **ĐẶT TOUR THÀNH CÔNG!**
+
+🎫 **Mã booking:** <booking_id>
+🏖️ **Tour:** <tour_name>
+📅 **Ngày khởi hành:** <travel_date hoặc "Chưa xác định">
+👥 **Số khách:** <adult_count> người lớn + <child_count> trẻ em
+💰 **Tổng tiền:** <total_price> VNĐ
+
+📋 **Thông tin liên hệ:**
+<Nếu có guest_info:>
+• Họ tên: <guest_name>
+• SĐT: <guest_phone>
+<Nếu có email:>
+• Email: <guest_email>
+
+📞 Nhân viên sẽ liên hệ xác nhận trong 24h.
+Cảm ơn bạn đã tin tưởng Travel AI! 🎉
+```
+
+**B. Nếu có lỗi (status = 'error'):**
+```
+FINAL_ANSWER: ❌ Rất tiếc, không thể đặt tour:
+
+⚠️ **Lỗi:** <message>
+
+📞 Vui lòng liên hệ hotline: 1900 1369
+Hoặc để lại thông tin, chúng tôi sẽ hỗ trợ bạn.
+Xin lỗi vì sự bất tiện! 😔
+```
+
+### TRƯỜNG HỢP 4: THÔNG TIN ĐỊA ĐIỂM/DU LỊCH
 
 PlannerAgent gửi kết quả web search
 
@@ -935,6 +1245,57 @@ TOOLS_SCHEMA = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "quick_book_tour",
+            "description": "Đặt tour nhanh từ chatbot. Tự động lấy chat_id, user_id, session_id từ environment. Cần ít nhất: tour_id (hoặc tour_name), guest_phone.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tour_id": {
+                        "type": "string",
+                        "description": "UUID của tour muốn đặt. Ưu tiên dùng nếu có."
+                    },
+                    "tour_name": {
+                        "type": "string",
+                        "description": "Tên tour để tìm kiếm (nếu không có tour_id). VD: 'Tour Đà Lạt Mộng Mơ'"
+                    },
+                    "travel_date": {
+                        "type": "string",
+                        "description": "Ngày khởi hành (YYYY-MM-DD). VD: '2025-12-25'"
+                    },
+                    "adult_count": {
+                        "type": "integer",
+                        "description": "Số người lớn (mặc định 1)",
+                        "default": 1
+                    },
+                    "child_count": {
+                        "type": "integer",
+                        "description": "Số trẻ em (mặc định 0)",
+                        "default": 0
+                    },
+                    "guest_name": {
+                        "type": "string",
+                        "description": "Tên khách hàng. VD: 'Nguyễn Văn A'"
+                    },
+                    "guest_phone": {
+                        "type": "string",
+                        "description": "Số điện thoại khách (BẮT BUỘC). VD: '0336516369'"
+                    },
+                    "guest_email": {
+                        "type": "string",
+                        "description": "Email khách (không bắt buộc). VD: 'user@example.com'"
+                    },
+                    "special_request": {
+                        "type": "string",
+                        "description": "Yêu cầu đặc biệt (không bắt buộc). VD: 'Phòng view biển'"
+                    }
+                },
+                "required": ["guest_phone"],
+            },
+        },
+    },
 ]
 
 
@@ -961,7 +1322,8 @@ def create_user_proxy_agent():
     user_proxy.register_function(
         function_map={
             "search_tour_chat": TourSearchService.search_tour_chat,
-            "search_web_information": WebSearchService.search_web_information
+            "search_web_information": WebSearchService.search_web_information,
+            "quick_book_tour": ChatbotBookingService.quick_book_tour
         }
     )
     

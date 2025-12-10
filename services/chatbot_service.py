@@ -143,13 +143,15 @@ class ChatbotService:
         return None
     
     @staticmethod
-    def process_chat(chat_id: uuid.UUID, user_message: str) -> dict:
+    def process_chat(chat_id: uuid.UUID, user_message: str, user_id: uuid.UUID = None, session_id: uuid.UUID = None) -> dict:
         """
         Xử lý tin nhắn chat từ user
         
         Args:
             chat_id: ID cuộc trò chuyện
             user_message: Nội dung tin nhắn từ user
+            user_id: ID user nếu đã đăng nhập  
+            session_id: Session ID nếu khách vãng lai
             
         Returns:
             Dict chứa reply
@@ -197,6 +199,19 @@ class ChatbotService:
             planner_agent = create_planner_agent(context_message, tour_context)  # Nhạc trưởng - nhận cả tour_context
             recommendation_expert = create_recommendation_agent()
             
+            # 🔧 INJECT CONTEXT vào agents để hỗ trợ booking
+            # Add chat_id, user_id, session_id vào environment cho các tools
+            import os
+            os.environ['CURRENT_CHAT_ID'] = str(chat_id)
+            if user_id:
+                os.environ['CURRENT_USER_ID'] = str(user_id)
+            else:
+                os.environ.pop('CURRENT_USER_ID', None)
+            if session_id:
+                os.environ['CURRENT_SESSION_ID'] = str(session_id)
+            else:
+                os.environ.pop('CURRENT_SESSION_ID', None)
+            
             # Tạo GroupChat với 4 agents
             groupchat = GroupChat(
                 agents=[user_proxy, intelligent_coordinator, planner_agent, recommendation_expert], 
@@ -226,12 +241,20 @@ class ChatbotService:
                 print(f"   - Total found: {metadata.get('total_found', 0)}")
             
             # ⚠️ KHÔNG tạo user message ở đây - đã tạo ở chatbot controller
-            # Chỉ lưu assistant message
+            # Chỉ lưu assistant message với context để hỗ trợ booking
+            enhanced_metadata = metadata.copy() if metadata else {}
+            enhanced_metadata.update({
+                "chat_id": str(chat_id),
+                "user_id": str(user_id) if user_id else None,
+                "session_id": str(session_id) if session_id else None,
+                "booking_context": True  # Flag để nhận biết có thể booking
+            })
+            
             assistant_msg = MessageService.create_message(CreateMessagePayload(
                 chat_id=chat_id, 
                 content=final_answer, 
                 role="assistant",
-                meta_data=metadata
+                meta_data=enhanced_metadata
             ))
             
             # 🔥 Emit socket event cho assistant message
@@ -241,10 +264,15 @@ class ChatbotService:
                 "content": final_answer,
                 "role": "assistant",
                 "created_at": assistant_msg.created_at.isoformat() if assistant_msg.created_at else None,
-                "meta_data": metadata
+                "meta_data": enhanced_metadata
             })
             
             print(f"💾 Assistant message saved with meta_data: {assistant_msg.meta_data is not None}")
+            
+            # 🧹 CLEANUP: Xóa environment variables sau khi xử lý
+            os.environ.pop('CURRENT_CHAT_ID', None)
+            os.environ.pop('CURRENT_USER_ID', None) 
+            os.environ.pop('CURRENT_SESSION_ID', None)
             
             return {
                 "reply": final_answer,

@@ -2,7 +2,7 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Query, Depends, HTTPException
 from pydantic import BaseModel, Field
-from models.bookings import BookingModel, BookingCreateModel, BookingUpdateModel
+from models.bookings import BookingModel, BookingCreateModel, BookingUpdateModel, BookingWithCartItemModel
 from services.bookings import BookingService
 from middleware.auth import get_current_admin, get_current_user
 
@@ -187,6 +187,53 @@ def get_booking_statistics(current_admin: str = Depends(get_current_admin)):
     return BookingService.get_booking_statistics()
 
 
+@router.get("/chatbot/bookings", response_model=List[BookingWithCartItemModel])
+def get_chatbot_bookings(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    current_admin: str = Depends(get_current_admin)
+):
+    """
+    Lấy tất cả bookings từ chatbot kèm cart items - Chỉ admin được phép
+    
+    Trả về các bookings có metadata['source'] = 'chatbot' 
+    kèm theo thông tin chi tiết của cart_item tương ứng
+    
+    **Response:**
+    ```json
+    [
+      {
+        "id": "uuid",
+        "user_id": "uuid",
+        "tour_id": "uuid",
+        "cart_item_id": "uuid",
+        "guest_name": "Nguyen Van A",
+        "adult_count": 2,
+        "child_count": 1,
+        "total_price": 15000000,
+        "status": "pending",
+        "meta_data": {
+          "source": "chatbot",
+          "chat_id": "uuid",
+          "booking_time": "2025-12-10T15:43:59"
+        },
+        "cart_item": {
+          "id": "uuid",
+          "cart_id": "uuid",
+          "tour_id": "uuid",
+          "quantity": 1,
+          "price_snapshot": 5000000,
+          "travel_date": "2025-12-20"
+        },
+        "created_at": "2025-12-10T15:43:59",
+        "updated_at": "2025-12-10T15:43:59"
+      }
+    ]
+    ```
+    """
+    return BookingService.get_chatbot_bookings(skip, limit)
+
+
 @router.get("/{booking_id}", response_model=BookingModel)
 def get_booking(booking_id: uuid.UUID):
     """Lấy thông tin chi tiết booking theo ID"""
@@ -220,19 +267,6 @@ def update_booking_status(
     if not updated_booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     return updated_booking
-
-
-@router.delete("/{booking_id}")
-def delete_booking(
-    booking_id: uuid.UUID,
-    current_admin: str = Depends(get_current_admin)
-):
-    """Soft delete booking - Chỉ admin được phép"""
-    success = BookingService.delete(booking_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Booking not found")
-    return {"message": "Booking deleted successfully"}
-
 
 @router.delete("/hard-delete/{booking_id}")
 def hard_delete_booking(

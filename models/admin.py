@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 from sqlalchemy import String, Text, func, ForeignKey, TIMESTAMP, DECIMAL, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -25,6 +25,7 @@ class CreateAdminModel(BaseModel):
     full_name: str
     email: str
     password: str
+    role: Literal["admin", "staff"] = "staff"  # Default role is staff
     model_config = ConfigDict(
         from_attributes=True,
         str_min_length=1,
@@ -35,6 +36,7 @@ class UpdateAdminModel(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
     password: Optional[str] = None
+    role: Optional[Literal["admin", "staff"]] = None
     model_config = ConfigDict(
         from_attributes=True,
         str_min_length=1,
@@ -57,3 +59,4 @@ class AdminLoginModel(BaseModel):
 class AdminLoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    role: str

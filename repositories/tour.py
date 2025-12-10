@@ -303,11 +303,11 @@ class TourRepository:
         tour_ids_by_destination = set()
         
         if departure:
-            dep_candidates = TourDepartureRepository.search_by_text(departure, limit=100)  # Lấy nhiều hơn để có đủ kết quả
+            dep_candidates = TourDepartureRepository.search_by_text(departure, limit=10) 
             tour_ids_by_departure = {d.dict()["tour_id"] for d in dep_candidates}
         
         if destination:
-            dest_candidates = TourDestinationRepository.search_by_text(destination, limit=100)  # Lấy nhiều hơn để có đủ kết quả
+            dest_candidates = TourDestinationRepository.search_by_text(destination, limit=10) 
             tour_ids_by_destination = {d.dict()["tour_id"] for d in dest_candidates}
         
         # Kết hợp tour_ids từ departure và destination

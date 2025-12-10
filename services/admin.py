@@ -15,6 +15,10 @@ class AdminService:
     @staticmethod
     def get_all() -> list[AdminModel]:
         return AdminRepositories.get_all()
+    
+    @staticmethod
+    def get_staff_admins() -> list[AdminModel]:
+        return AdminRepositories.get_staff_admins()
 
     @staticmethod
     def get(admin_id: uuid.UUID) -> AdminModel | None:
@@ -49,5 +53,6 @@ class AdminService:
         
         return AdminLoginResponse(
             access_token=token,
-            token_type="bearer"
+            token_type="bearer",
+            role=admin.role
         )

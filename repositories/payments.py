@@ -162,3 +162,16 @@ class PaymentRepository:
             
             total = sum(payment.amount for payment in result)
             return float(total) if total else 0.0
+
+    @staticmethod
+    def get_total_success_amount() -> float:
+        """Tính tổng tiền của tất cả payments có status = success"""
+        with Session() as session:
+            result = session.query(
+                PaymentTable
+            ).filter(
+                PaymentTable.payment_status == "success"
+            ).all()
+            
+            total = sum(payment.amount for payment in result)
+            return float(total) if total else 0.0

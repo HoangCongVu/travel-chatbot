@@ -63,7 +63,6 @@ def upgrade() -> None:
         sa.Column('meta_data', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column('created_at', sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column('updated_at', sa.TIMESTAMP(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now(), nullable=False),
-        sa.Column('deleted_at', sa.TIMESTAMP(timezone=True), nullable=True),
     )
 
     # Tạo bảng payments

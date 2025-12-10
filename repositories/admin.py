@@ -65,6 +65,12 @@ class AdminRepositories:
             return None
     
     @staticmethod
+    def get_staff_admins() -> list[AdminModel]:
+        with Session() as session:
+            staff_admins = session.query(Admin).filter(Admin.role == "staff").all()
+            return [AdminModel.model_validate(admin, from_attributes=True) for admin in staff_admins]
+    
+    @staticmethod
     def login(email: str, password: str) -> AdminModel:
         with Session() as session:
             admin = session.query(Admin).filter(Admin.email == email).first()

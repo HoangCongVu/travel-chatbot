@@ -118,6 +118,17 @@ def get_payment_statistics(current_admin: str = Depends(get_current_admin)):
     return PaymentService.get_payment_statistics()
 
 
+@router.get("/total-success-amount")
+def get_total_success_amount(current_admin: str = Depends(get_current_admin)):
+    """Tính tổng tiền của tất cả payments có status = success - Chỉ admin được phép"""
+    total = PaymentService.get_total_success_amount()
+    return {
+        "status": "success",
+        "total_success_amount": total,
+        "message": f"Tổng tiền từ các giao dịch thành công: {total:,.0f} VND"
+    }
+
+
 @router.get("/booking/{booking_id}/total")
 def get_total_amount_by_booking(
     booking_id: uuid.UUID,

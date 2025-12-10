@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy import String, Integer, Numeric, Text, ForeignKey, func, TIMESTAMP
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,7 +35,6 @@ class BookingTable(Base):
     meta_data: Mapped[dict | None] = mapped_column(JSONB(astext_type=Text()), nullable=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    deleted_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
 
 
 class BookingModel(BaseModel):
@@ -55,7 +54,6 @@ class BookingModel(BaseModel):
     meta_data: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
-    deleted_at: Optional[datetime] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -89,3 +87,26 @@ class BookingUpdateModel(BaseModel):
     status: Optional[str] = None
     special_request: Optional[str] = None
     meta_data: Optional[dict] = None
+
+
+class BookingWithCartItemModel(BaseModel):
+    """Model for booking with cart item details"""
+    id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
+    session_id: Optional[uuid.UUID] = None
+    tour_id: uuid.UUID
+    cart_item_id: uuid.UUID
+    guest_name: Optional[str] = None
+    guest_phone: Optional[str] = None
+    guest_email: Optional[str] = None
+    adult_count: int
+    child_count: int
+    total_price: float
+    status: str
+    special_request: Optional[str] = None
+    
+    # Cart item details
+    cart_item: Optional[dict] = None
+    
+    model_config = ConfigDict(from_attributes=True)
+

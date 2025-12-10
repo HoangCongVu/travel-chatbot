@@ -106,6 +106,11 @@ class PaymentService:
         return PaymentRepository.get_total_amount_by_booking(booking_id)
 
     @staticmethod
+    def get_total_success_amount() -> float:
+        """Tính tổng tiền của tất cả payments có status = success"""
+        return PaymentRepository.get_total_success_amount()
+
+    @staticmethod
     def get_payment_statistics() -> dict:
         """Lấy thống kê payments theo status"""
         return {

@@ -2,7 +2,8 @@ import uuid
 from typing import List, Optional
 from datetime import datetime
 from db import Session
-from models.bookings import BookingTable, BookingModel, BookingCreateModel, BookingUpdateModel
+from models.bookings import BookingTable, BookingModel, BookingCreateModel, BookingUpdateModel, BookingWithCartItemModel
+from models.cart_items import CartItemTable
 from sqlalchemy import func
 
 
@@ -22,8 +23,7 @@ class BookingRepository:
         """Lấy booking theo ID"""
         with Session() as session:
             booking = session.query(BookingTable).filter(
-                BookingTable.id == booking_id,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.id == booking_id
             ).first()
             return BookingModel.model_validate(booking) if booking else None
 
@@ -32,7 +32,6 @@ class BookingRepository:
         """Lấy danh sách tất cả bookings"""
         with Session() as session:
             bookings = session.query(BookingTable).filter(
-                BookingTable.deleted_at.is_(None)
             ).offset(skip).limit(limit).all()
             return [BookingModel.model_validate(booking) for booking in bookings]
 
@@ -42,7 +41,6 @@ class BookingRepository:
         with Session() as session:
             bookings = session.query(BookingTable).filter(
                 BookingTable.user_id == user_id,
-                BookingTable.deleted_at.is_(None)
             ).offset(skip).limit(limit).all()
             return [BookingModel.model_validate(booking) for booking in bookings]
 
@@ -51,8 +49,7 @@ class BookingRepository:
         """Lấy danh sách bookings theo session_id (khách vãng lai)"""
         with Session() as session:
             bookings = session.query(BookingTable).filter(
-                BookingTable.session_id == session_id,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.session_id == session_id
             ).offset(skip).limit(limit).all()
             return [BookingModel.model_validate(booking) for booking in bookings]
 
@@ -61,8 +58,7 @@ class BookingRepository:
         """Lấy danh sách bookings theo tour_id"""
         with Session() as session:
             bookings = session.query(BookingTable).filter(
-                BookingTable.tour_id == tour_id,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.tour_id == tour_id
             ).offset(skip).limit(limit).all()
             return [BookingModel.model_validate(booking) for booking in bookings]
 
@@ -72,7 +68,6 @@ class BookingRepository:
         with Session() as session:
             bookings = session.query(BookingTable).filter(
                 BookingTable.status == status,
-                BookingTable.deleted_at.is_(None)
             ).offset(skip).limit(limit).all()
             return [BookingModel.model_validate(booking) for booking in bookings]
 
@@ -81,8 +76,7 @@ class BookingRepository:
         """Cập nhật booking"""
         with Session() as session:
             booking = session.query(BookingTable).filter(
-                BookingTable.id == booking_id,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.id == booking_id
             ).first()
             if not booking:
                 return None
@@ -94,20 +88,6 @@ class BookingRepository:
             session.refresh(booking)
             return BookingModel.model_validate(booking)
 
-    @staticmethod
-    def delete(booking_id: uuid.UUID) -> bool:
-        """Soft delete booking"""
-        with Session() as session:
-            booking = session.query(BookingTable).filter(
-                BookingTable.id == booking_id,
-                BookingTable.deleted_at.is_(None)
-            ).first()
-            if not booking:
-                return False
-            
-            booking.deleted_at = func.now()
-            session.commit()
-            return True
 
     @staticmethod
     def hard_delete(booking_id: uuid.UUID) -> bool:
@@ -128,8 +108,7 @@ class BookingRepository:
         """Đếm số lượng bookings theo status"""
         with Session() as session:
             count = session.query(BookingTable).filter(
-                BookingTable.status == status,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.status == status         
             ).count()
             return count
 
@@ -138,7 +117,33 @@ class BookingRepository:
         """Đếm số lượng bookings theo tour_id"""
         with Session() as session:
             count = session.query(BookingTable).filter(
-                BookingTable.tour_id == tour_id,
-                BookingTable.deleted_at.is_(None)
+                BookingTable.tour_id == tour_id
             ).count()
             return count
+
+    @staticmethod
+    def get_chatbot_bookings(skip: int = 0, limit: int = 100) -> List[BookingWithCartItemModel]:
+        """Lấy tất cả bookings có source từ chatbot và kèm cart_item"""
+        with Session() as session:
+            bookings = session.query(BookingTable, CartItemTable).join(
+                CartItemTable,
+                BookingTable.cart_item_id == CartItemTable.id
+            ).filter(
+                BookingTable.meta_data['source'].astext == 'chatbot',
+            ).offset(skip).limit(limit).all()
+            
+            result = []
+            for booking, cart_item in bookings:
+                booking_dict = BookingModel.model_validate(booking).model_dump()
+                booking_dict['cart_item'] = {
+                    'id': cart_item.id,
+                    'cart_id': cart_item.cart_id,
+                    'tour_id': cart_item.tour_id,
+                    'quantity': cart_item.quantity,
+                    'price_snapshot': float(cart_item.price_snapshot),
+                    'travel_date': cart_item.travel_date
+                }
+                result.append(BookingWithCartItemModel(**booking_dict))
+            
+            return result
+
