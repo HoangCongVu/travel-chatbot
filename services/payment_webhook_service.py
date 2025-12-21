@@ -29,24 +29,20 @@ class PaymentWebhookService:
             data.get("transferId")
         )
         payment_id = data.get("payment_id")
-        
-        # Lấy status từ webhook (KHÔNG set default)
-        # SePay chỉ gọi webhook khi ĐÃ NHẬN TIỀN THẬT
-        # Nhưng vẫn cần check để tránh false positive
         status = data.get("status")
-        
-        # Nếu không có status field, coi như đây là webhook thông báo nhận tiền từ SePay
-        # (SePay mặc định webhook = đã nhận tiền)
+    
         if status is None:
             # Kiểm tra xem có đủ dữ liệu giao dịch không
+            # SePay gửi "transferAmount" hoặc "amount"
             has_transaction_data = (
-                data.get("amount") and 
+                (data.get("amount") or data.get("transferAmount")) and 
                 (data.get("transferId") or data.get("code") or data.get("referenceCode"))
             )
             if has_transaction_data:
                 status = "success"
             else:
                 # Webhook không hợp lệ
+                print(f"⚠️ Webhook không hợp lệ - thiếu amount hoặc transaction_id: {data}")
                 return None
         
         # Map status từ webhook sang hệ thống
@@ -63,10 +59,15 @@ class PaymentWebhookService:
         
         # Cập nhật payment theo transaction_id (ưu tiên)
         if transaction_id:
+            print(f"🔍 Tìm payment với transaction_id: {transaction_id}")
             updated_payment = PaymentService.update_by_transaction_id(
                 transaction_id=transaction_id,
                 payment_status=payment_status
             )
+            if updated_payment:
+                print(f"✅ Tìm thấy và cập nhật payment: {updated_payment.id}")
+            else:
+                print(f"❌ KHÔNG tìm thấy payment với transaction_id: {transaction_id}")
         
         # Nếu không tìm thấy bằng transaction_id, thử payment_id
         if not updated_payment and payment_id:

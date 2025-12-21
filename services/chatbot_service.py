@@ -170,7 +170,12 @@ class ChatbotService:
             context_data = get_recent_chat_history(chat_id, 10)
             chat_history = context_data["chat_history"]
             tour_context = context_data["tour_context"]
-            context_message = format_context_message(chat_history)
+            
+            # ⚠️ QUAN TRỌNG: Thêm message hiện tại vào lịch sử
+            # Vì message mới vừa được tạo ở controller nhưng chưa xuất hiện trong get_recent_chat_history
+            # Cần thêm thủ công để IntelligentCoordinator có thể đọc được
+            chat_history_with_current = chat_history + [{"role": "user", "content": user_message}]
+            context_message = format_context_message(chat_history_with_current)
             
             # 📊 LOG: Hiển thị lịch sử chat và tour context
             print("\n" + "="*80)
@@ -212,12 +217,85 @@ class ChatbotService:
             else:
                 os.environ.pop('CURRENT_SESSION_ID', None)
             
+            # 🔧 Custom speaker selection để LUÔN GỌI IntelligentCoordinator TRƯỚC
+            def custom_speaker_selection(last_speaker, groupchat):
+                """
+                Luồng xử lý:
+                1. UserProxy → IntelligentCoordinator (LUÔN LUÔN)
+                2. IntelligentCoordinator → PlannerAgent hoặc kết thúc
+                3. PlannerAgent → UserProxy (execute tools) 
+                4. UserProxy (tool results) → RecommendationAgent
+                5. RecommendationAgent → kết thúc
+                """
+                messages = groupchat.messages
+                if not messages:
+                    return intelligent_coordinator
+                
+                last_message = messages[-1] if messages else None
+                last_speaker_name = last_speaker.name if last_speaker else None
+                
+                # 1️⃣ Sau khi UserProxy gửi user message → LUÔN GỌI IntelligentCoordinator
+                if last_speaker_name == "UserProxy":
+                    # Kiểm tra xem có phải tool result không
+                    if last_message and last_message.get("role") == "tool":
+                        # ⚠️ QUAN TRỌNG: Kiểm tra xem có phải kết quả từ quick_book_tour không
+                        # Nếu đúng → CHUYỂN THẲNG CHO RecommendationAgent (KHÔNG cho PlannerAgent gọi lại)
+                        content = last_message.get("content", "")
+                        
+                        # Parse tool result để kiểm tra
+                        is_booking_result = False
+                        try:
+                            if isinstance(content, dict):
+                                is_booking_result = "booking_id" in content.get("data", {})
+                            elif isinstance(content, str):
+                                is_booking_result = "booking_id" in content
+                        except:
+                            pass
+                        
+                        if is_booking_result:
+                            # Tool result từ quick_book_tour → CHUYỂN THẲNG RecommendationAgent
+                            print("🚨 Phát hiện booking result → BẮT BUỘC chuyển RecommendationAgent")
+                            return recommendation_expert
+                        else:
+                            # Tool result khác (search_tour_chat, search_web_information) → TRẢ VỀ PlannerAgent
+                            return planner_agent
+                    else:
+                        # User message → LUÔN GỌI IntelligentCoordinator
+                        return intelligent_coordinator
+                
+                # 2️⃣ Sau IntelligentCoordinator → PlannerAgent hoặc kết thúc
+                elif last_speaker_name == "IntelligentCoordinator":
+                    content = last_message.get("content", "") if last_message else ""
+                    if "FINAL_ANSWER:" in content:
+                        # IntelligentCoordinator đã trả lời → kết thúc
+                        return None
+                    else:
+                        # IntelligentCoordinator chuyển công việc → PlannerAgent
+                        return planner_agent
+                
+                # 3️⃣ Sau PlannerAgent → kiểm tra nội dung
+                elif last_speaker_name == "PlannerAgent":
+                    content = last_message.get("content", "") if last_message else ""
+                    # Nếu PlannerAgent mention RecommendationAgent → chuyển cho RecommendationAgent
+                    if "RecommendationAgent" in content:
+                        return recommendation_expert
+                    # Nếu không → execute tools qua UserProxy
+                    else:
+                        return user_proxy
+                
+                # 4️⃣ Sau RecommendationAgent → kết thúc (có FINAL_ANSWER)
+                elif last_speaker_name == "RecommendationAgent":
+                    return None
+                
+                # Default: IntelligentCoordinator
+                return intelligent_coordinator
+            
             # Tạo GroupChat với 4 agents
             groupchat = GroupChat(
                 agents=[user_proxy, intelligent_coordinator, planner_agent, recommendation_expert], 
                 messages=chat_history,
                 max_round=15,
-                speaker_selection_method="auto",
+                speaker_selection_method=custom_speaker_selection,
                 allow_repeat_speaker=False,  # Không cho phép cùng một speaker nói liên tục
             )
             
@@ -240,21 +318,12 @@ class ChatbotService:
                 print(f"   - Tours found: {len(metadata.get('tours', []))}")
                 print(f"   - Total found: {metadata.get('total_found', 0)}")
             
-            # ⚠️ KHÔNG tạo user message ở đây - đã tạo ở chatbot controller
-            # Chỉ lưu assistant message với context để hỗ trợ booking
-            enhanced_metadata = metadata.copy() if metadata else {}
-            enhanced_metadata.update({
-                "chat_id": str(chat_id),
-                "user_id": str(user_id) if user_id else None,
-                "session_id": str(session_id) if session_id else None,
-                "booking_context": True  # Flag để nhận biết có thể booking
-            })
-            
+            # Lưu assistant message với metadata từ tool (nếu có)
             assistant_msg = MessageService.create_message(CreateMessagePayload(
                 chat_id=chat_id, 
                 content=final_answer, 
                 role="assistant",
-                meta_data=enhanced_metadata
+                meta_data=metadata
             ))
             
             # 🔥 Emit socket event cho assistant message
@@ -264,7 +333,7 @@ class ChatbotService:
                 "content": final_answer,
                 "role": "assistant",
                 "created_at": assistant_msg.created_at.isoformat() if assistant_msg.created_at else None,
-                "meta_data": enhanced_metadata
+                "meta_data": metadata
             })
             
             print(f"💾 Assistant message saved with meta_data: {assistant_msg.meta_data is not None}")

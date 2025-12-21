@@ -138,6 +138,7 @@ class PaymentRepository:
             if not payment:
                 return None
             
+            print(f"✅ Tìm thấy payment {payment.id}, cập nhật status -> {payment_status}")
             payment.payment_status = payment_status
             
             # Nếu status = success, set paid_at

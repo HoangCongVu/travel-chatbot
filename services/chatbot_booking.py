@@ -10,6 +10,7 @@ from services.bookings import BookingService
 from services.cart_items import CartItemService
 from services.carts import CartService
 from services.tour import TourService
+from utils.context import ChatContext
 
 
 class ChatbotBookingService:
@@ -50,16 +51,14 @@ class ChatbotBookingService:
         Returns:
             Dict chứa thông tin booking hoặc lỗi
         """
-        import os
-        
         try:
-            # 🔧 AUTO-DETECT context từ environment nếu không được truyền
+            # 🔧 AUTO-DETECT context từ ContextVar (thread-safe)
             if not chat_id:
-                chat_id = os.environ.get('CURRENT_CHAT_ID')
+                chat_id = ChatContext.get_chat_id()
             if not user_id:
-                user_id = os.environ.get('CURRENT_USER_ID')
+                user_id = ChatContext.get_user_id()
             if not session_id:
-                session_id = os.environ.get('CURRENT_SESSION_ID')
+                session_id = ChatContext.get_session_id()
             
             # Convert string UUIDs to UUID objects
             if chat_id:
@@ -96,12 +95,14 @@ class ChatbotBookingService:
             # 2. TÌM TOUR NẾU CHƯA CÓ TOUR_ID
             if not tour_uuid and tour_name:
                 tours = TourService.search_by_text(query=tour_name, limit=1)
-                if not tours.get("tours"):
+                # ⚠️ search_by_text trả về LIST object, KHÔNG phải dict
+                if not tours or len(tours) == 0:
                     return {
                         "status": "error",
                         "message": f"Không tìm thấy tour '{tour_name}'"
                     }
-                tour_uuid = uuid.UUID(tours["tours"][0]["id"])
+                # Lấy trực tiếp từ object trong list
+                tour_uuid = uuid.UUID(str(tours[0].id))
             
             # 3. LẤY THÔNG TIN CHI TIẾT TOUR
             tour_detail = TourService.get(tour_uuid)
@@ -114,12 +115,25 @@ class ChatbotBookingService:
             # Lấy tour đầu tiên từ danh sách
             tour_info = tour_detail["tours"][0]
             
-            # 4. TÍNH GIÁ TOUR
+            # 4. KIỂM TRA PRICE_TYPE - CẤM ĐẶT TOUR "THEO YÊU CẦU"
+            price_type = tour_info.get("price_type", "").lower()
+            if "theo yêu cầu" in price_type or "on request" in price_type or "liên hệ" in price_type:
+                return {
+                    "status": "error",
+                    "message": f"Tour '{tour_info['tour_name']}' có giá theo yêu cầu. Vui lòng liên hệ hotline 1900 1369 hoặc để lại thông tin, nhân viên sẽ tư vấn chi tiết.",
+                    "tour_info": {
+                        "tour_name": tour_info["tour_name"],
+                        "price_type": tour_info.get("price_type"),
+                        "needs_quotation": True
+                    }
+                }
+            
+            # 5. TÍNH GIÁ TOUR
             tour_price = ChatbotBookingService._calculate_tour_price(
                 tour_info, travel_date, adult_count, child_count
             )
             
-            # 5. TẠO CART ITEM (TEMP)
+            # 6. TẠO CART ITEM (TEMP)
             # Tạo cart tạm để tuân thủ cấu trúc hiện có
             temp_cart = CartService.create(CartCreateModel(
                 user_id=user_uuid,
@@ -134,7 +148,7 @@ class ChatbotBookingService:
                 travel_date=date.fromisoformat(travel_date) if travel_date else date.today()
             ))
             
-            # 6. TẠO BOOKING
+            # 7. TẠO BOOKING
             booking_data = BookingCreateModel(
                 user_id=user_uuid,
                 session_id=session_uuid,
@@ -219,10 +233,9 @@ class ChatbotBookingService:
                 if base_price == 0:
                     base_price = float(tour_info["price_by_packages"][0]["price"])
             
-            # 3. Cuối cùng dùng giá mặc định nếu có
+            # 3. Nếu vẫn không có giá → LỖI (KHÔNG dùng giá mặc định)
             if base_price == 0:
-                # Fallback price logic (có thể cần điều chỉnh)
-                base_price = 1000000  # 1 triệu VND default
+                raise ValueError("Không tìm thấy giá tour hợp lệ")
             
             # 4. Tính giá cho trẻ em (thường 70% giá người lớn)
             child_price = base_price * 0.7
@@ -234,7 +247,7 @@ class ChatbotBookingService:
             
         except Exception as e:
             print(f"⚠️ Lỗi tính giá tour: {str(e)}")
-            return 1000000  # Giá mặc định
+            raise  # Throw lỗi lên trên thay vì return giá mặc định
     
     @staticmethod
     def get_user_bookings(user_id: uuid.UUID = None, session_id: uuid.UUID = None, limit: int = 5) -> dict:

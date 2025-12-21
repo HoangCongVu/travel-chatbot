@@ -4,6 +4,7 @@ from datetime import datetime
 from db import Session
 from models.bookings import BookingTable, BookingModel, BookingCreateModel, BookingUpdateModel, BookingWithCartItemModel
 from models.cart_items import CartItemTable
+from models.tour import TourTable
 from sqlalchemy import func
 
 
@@ -125,20 +126,24 @@ class BookingRepository:
     def get_chatbot_bookings(skip: int = 0, limit: int = 100) -> List[BookingWithCartItemModel]:
         """Lấy tất cả bookings có source từ chatbot và kèm cart_item"""
         with Session() as session:
-            bookings = session.query(BookingTable, CartItemTable).join(
+            bookings = session.query(BookingTable, CartItemTable, TourTable).join(
                 CartItemTable,
                 BookingTable.cart_item_id == CartItemTable.id
+            ).join(
+                TourTable,
+                CartItemTable.tour_id == TourTable.id
             ).filter(
                 BookingTable.meta_data['source'].astext == 'chatbot',
             ).offset(skip).limit(limit).all()
             
             result = []
-            for booking, cart_item in bookings:
+            for booking, cart_item, tour in bookings:
                 booking_dict = BookingModel.model_validate(booking).model_dump()
+                booking_dict['tour_name'] = tour.tour_name
                 booking_dict['cart_item'] = {
                     'id': cart_item.id,
                     'cart_id': cart_item.cart_id,
-                    'tour_id': cart_item.tour_id,
+                    'tour_name': tour.tour_name,
                     'quantity': cart_item.quantity,
                     'price_snapshot': float(cart_item.price_snapshot),
                     'travel_date': cart_item.travel_date

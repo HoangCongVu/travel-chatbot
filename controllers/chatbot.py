@@ -6,6 +6,7 @@ from services.chatbot_service import ChatbotService
 from services.message import MessageService
 from models.message import CreateMessagePayload
 from utils.socket_manager import emit_socket_safely
+from utils.context import ChatContext
 from middleware.auth import get_current_user
 from services.chat import ChatService
 
@@ -61,13 +62,25 @@ def chatbot_reply(request: ChatbotRequest):
         "meta_data": user_msg.meta_data
     })
     
-    # Xử lý chatbot với session context
-    return ChatbotService.process_chat(
-        chat_id=request.chat_id, 
-        user_message=user_message_content,
-        user_id=chat.user_id,  # Có thể None nếu anonymous
-        session_id=chat.session_id
+    # ✅ SET CONTEXT cho request này (thread-safe)
+    ChatContext.set(
+        chat_id=str(request.chat_id),
+        user_id=str(chat.user_id) if chat.user_id else None,
+        session_id=str(chat.session_id) if chat.session_id else None
     )
+    
+    try:
+        # Xử lý chatbot với session context
+        result = ChatbotService.process_chat(
+            chat_id=request.chat_id, 
+            user_message=user_message_content,
+            user_id=chat.user_id,  # Có thể None nếu anonymous
+            session_id=chat.session_id
+        )
+        return result
+    finally:
+        # 🧹 Cleanup context sau khi xử lý xong
+        ChatContext.clear()
 
 
 @router.post("/auth")  
@@ -119,10 +132,22 @@ def chatbot_reply_auth(
         "meta_data": user_msg.meta_data
     })
     
-    # Xử lý chatbot với user context
-    return ChatbotService.process_chat(
-        chat_id=request.chat_id,
-        user_message=user_message_content,
-        user_id=user_uuid,
+    # ✅ SET CONTEXT cho request này (thread-safe)
+    ChatContext.set(
+        chat_id=str(request.chat_id),
+        user_id=str(user_uuid),
         session_id=None  # Authenticated user không cần session_id
     )
+    
+    try:
+        # Xử lý chatbot với user context
+        result = ChatbotService.process_chat(
+            chat_id=request.chat_id,
+            user_message=user_message_content,
+            user_id=user_uuid,
+            session_id=None  # Authenticated user không cần session_id
+        )
+        return result
+    finally:
+        # 🧹 Cleanup context sau khi xử lý xong
+        ChatContext.clear()
