@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
 import json
 import uuid
 from env import env
@@ -7,6 +7,7 @@ from services.chat import ChatService
 from services.message import MessageService
 from models.chat import CreateChatPayload
 from models.message import CreateMessagePayload
+from utils.context import ChatContext
 import httpx
 import asyncio 
 
@@ -15,6 +16,10 @@ router = APIRouter(tags=["Facebook Webhook"])
 # Verify Token và Access Token
 VERIFY_TOKEN = env.VERIFY_TOKEN
 PAGE_ACCESS_TOKEN = env.PAGE_ACCESS_TOKEN
+
+# 🔒 Set để track các message đã xử lý (deduplication)
+processed_message_ids = set()
+MAX_PROCESSED_IDS = 1000  # Giới hạn để tránh memory leak
 
 
 async def get_or_create_chat_for_facebook_user(facebook_user_id: str) -> uuid.UUID:
@@ -84,7 +89,7 @@ async def verify_webhook(request: Request):
 
 
 @router.post("/webhook")
-async def handle_webhook(request: Request):
+async def handle_webhook(request: Request, background_tasks: BackgroundTasks):
     try:
         data = await request.json()
     except json.JSONDecodeError:
@@ -103,32 +108,34 @@ async def handle_webhook(request: Request):
             # Xử lý tin nhắn text
             if "message" in event:
                 message_text = event["message"].get("text", "")
+                message_id = event["message"].get("mid", "")
+                
                 if not message_text:
                     continue
 
+                # 🔒 DEDUPLICATION: Bỏ qua message đã xử lý
+                if message_id in processed_message_ids:
+                    print(f"⚠️ Skipping duplicate message {message_id} from {sender_id}")
+                    continue
+                
+                # Thêm vào set đã xử lý
+                processed_message_ids.add(message_id)
+                
+                # Giới hạn kích thước set để tránh memory leak
+                if len(processed_message_ids) > MAX_PROCESSED_IDS:
+                    # Xóa một nửa set (giữ lại message mới nhất)
+                    processed_message_ids.clear()
+                    processed_message_ids.add(message_id)
+
                 print(f"💬 Message from {sender_id}: {message_text}")
                 
-                try:
-                    # 1. Tạo hoặc lấy chat session
-                    chat_id = await get_or_create_chat_for_facebook_user(sender_id)
-                    print(f"✅ Chat ID: {chat_id}")
-
-                    # 2. Gọi chatbot (ChatbotService sẽ tự động lưu tin nhắn)
-                    bot_response = ChatbotService.process_chat(chat_id, message_text)
-                    bot_reply = bot_response.get("reply", "Xin lỗi, tôi không hiểu câu hỏi của bạn.")
-                    print(f"🤖 Bot reply ({len(bot_reply)} chars):")
-                    print(bot_reply)
-                    print("="*50)
-
-                    # 3. Gửi phản hồi qua Facebook
-                    await send_facebook_message(sender_id, bot_reply)
-                    print(f"✅ Successfully replied to {sender_id}")
-
-                except Exception as e:
-                    import traceback
-                    print(f"❌ Error processing message from {sender_id}: {e}")
-                    print(traceback.format_exc())
-                    await send_facebook_message(sender_id, "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.")
+                # ⚡ Xử lý bất đồng bộ để trả response ngay cho Facebook
+                background_tasks.add_task(
+                    process_facebook_message,
+                    sender_id=sender_id,
+                    message_text=message_text,
+                    message_id=message_id
+                )
 
             # Xử lý postback
             elif "postback" in event:
@@ -136,7 +143,65 @@ async def handle_webhook(request: Request):
                 print(f"🔘 Postback from {sender_id}: {payload}")
                 # TODO: xử lý postback
 
+    # ✅ TRẢ RESPONSE NGAY LẬP TỨC cho Facebook (tránh retry)
     return {"status": "ok"}
+
+
+async def process_facebook_message(sender_id: str, message_text: str, message_id: str):
+    """
+    Xử lý message Facebook bất đồng bộ (chạy trong background)
+    
+    Args:
+        sender_id: Facebook user ID
+        message_text: Nội dung tin nhắn
+        message_id: Message ID để tracking
+    """
+    try:
+        # 1. Tạo hoặc lấy chat session
+        chat_id = await get_or_create_chat_for_facebook_user(sender_id)
+        print(f"✅ [BG] Chat ID: {chat_id}")
+
+        # 2. LƯU TIN NHẮN USER VÀO DATABASE
+        user_msg = MessageService.create_message(CreateMessagePayload(
+            chat_id=chat_id,
+            content=message_text,
+            role="user"
+        ))
+        print(f"💾 [BG] User message saved: {user_msg.id}")
+
+        # ✅ 2.5. SET CONTEXT cho request này (thread-safe)
+        # ⚠️ QUAN TRỌNG: Cần set context để quick_book_tour có thể lấy chat_id
+        chat = ChatService.get_chat(chat_id)
+        ChatContext.set(
+            chat_id=str(chat_id),
+            user_id=str(chat.user_id) if chat and chat.user_id else None,
+            session_id=str(chat.session_id) if chat and chat.session_id else None
+        )
+
+        try:
+            # 3. Gọi chatbot (ChatbotService sẽ tự động lưu tin nhắn assistant)
+            bot_response = ChatbotService.process_chat(chat_id, message_text)
+            bot_reply = bot_response.get("reply", "Xin lỗi, tôi không hiểu câu hỏi của bạn.")
+            print(f"🤖 [BG] Bot reply ({len(bot_reply)} chars):")
+            print(bot_reply)
+            print("="*50)
+
+            # 4. Gửi phản hồi qua Facebook
+            await send_facebook_message(sender_id, bot_reply)
+            print(f"✅ [BG] Successfully replied to {sender_id}")
+        
+        finally:
+            # 🧹 Cleanup context sau khi xử lý xong
+            ChatContext.clear()
+
+    except Exception as e:
+        import traceback
+        print(f"❌ [BG] Error processing message from {sender_id}: {e}")
+        print(traceback.format_exc())
+        try:
+            await send_facebook_message(sender_id, "Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.")
+        except Exception as send_error:
+            print(f"❌ [BG] Failed to send error message: {send_error}")
 
 
 async def send_facebook_message(recipient_id: str, message_text: str):

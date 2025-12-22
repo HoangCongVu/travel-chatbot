@@ -33,29 +33,56 @@ class CartItemService:
 
         # Tính giá dựa vào price_type
         price = 0.0
-        if tour.price_type == "by_date":
-            # Giá theo ngày cụ thể
+        
+        # Danh sách các price_type dựa trên ngày
+        date_based_types = [
+            "by_date",
+            "Dựa trên ngày khởi hành quốc tế",
+            "Dựa trên mùa – theo ngày",
+            "Dựa trên ngày cao điểm",
+            "Dựa trên ngày bay"
+        ]
+        
+        # Danh sách các price_type dựa trên gói
+        package_based_types = [
+            "by_package",
+            "Dựa trên gói",
+            "Cố định"
+        ]
+        
+        if tour.price_type in date_based_types:
+            # Giá theo ngày cụ thể - tìm trong price_by_dates
             price_by_date = PriceByDateRepository.get_by_tour_and_date(tour_id, travel_date)
             if price_by_date:
                 price = float(price_by_date.price)
             else:
-                raise ValueError(f"Không tìm thấy giá cho tour này vào ngày {travel_date}")
-        elif tour.price_type == "by_package":
-            # Giá theo gói (nhiều gói khác nhau)
+                # Nếu không tìm thấy giá theo ngày, thử lấy giá từ package
+                packages = PriceByPackageRepository.get_by_tour_id(tour_id)
+                if packages:
+                    price = float(packages[0].price)
+                else:
+                    raise ValueError(f"Không tìm thấy giá cho tour này vào ngày {travel_date}")
+        elif tour.price_type in package_based_types:
+            # Giá theo gói hoặc cố định
             packages = PriceByPackageRepository.get_by_tour_id(tour_id)
             if packages:
                 price = float(packages[0].price)
             else:
                 raise ValueError(f"Không tìm thấy gói giá cho tour này")
-        elif tour.price_type == "Cố định":
-            # Giá cố định - ngày nào cũng giá đó
-            packages = PriceByPackageRepository.get_by_tour_id(tour_id)
-            if packages:
-                price = float(packages[0].price)
-            else:
-                raise ValueError(f"Không tìm thấy giá cố định cho tour này")
+        elif tour.price_type == "Theo yêu cầu":
+            # Tour theo yêu cầu - giá mặc định là 0, cần liên hệ
+            raise ValueError(f"Tour '{tour.tour_name}' là tour theo yêu cầu. Vui lòng liên hệ để được báo giá.")
         else:
-            raise ValueError(f"Loại giá không hợp lệ: {tour.price_type}")
+            # Fallback: thử tìm giá trong cả 2 bảng
+            price_by_date = PriceByDateRepository.get_by_tour_and_date(tour_id, travel_date)
+            if price_by_date:
+                price = float(price_by_date.price)
+            else:
+                packages = PriceByPackageRepository.get_by_tour_id(tour_id)
+                if packages:
+                    price = float(packages[0].price)
+                else:
+                    raise ValueError(f"Không tìm thấy giá cho tour này (price_type: {tour.price_type})")
 
         # Kiểm tra item đã tồn tại chưa
         existing_item = CartItemRepository.get_by_cart_and_tour(cart_id, tour_id, travel_date)

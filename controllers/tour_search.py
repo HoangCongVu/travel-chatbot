@@ -146,27 +146,30 @@ def search_tour_chat(
 @router.get("/search-by-fields/")
 def search_tour_by_fields(
     tour_type_id: int = Query(None, description="ID loại tour"),
-    destination: str = Query(None, description="Điểm đến (VD: Đà Lạt, Singapore) - tìm bằng embedding"),
-    departure: str = Query(None, description="Điểm khởi hành (VD: Hà Nội, TP.HCM) - tìm bằng embedding"),
+    destination: str = Query(None, description="Điểm đến (VD: Đà Lạt, Singapore) - tìm bằng AI embedding"),
+    departure: str = Query(None, description="Điểm khởi hành (VD: Hà Nội, TP.HCM) - tìm bằng AI embedding"),
     target_date: date = Query(None, description="Ngày khởi hành (VD: 2025-07-15)"),
-    limit: int = Query(5, description="Số lượng tour tối đa", ge=1, le=20)
+    limit: int = Query(10, description="Số lượng tour tối đa", ge=1, le=50)
 ):
     """
-    API tìm kiếm tour với các điều kiện kết hợp (tương tự search_tour_chat).
+    API tìm kiếm tour với các điều kiện kết hợp sử dụng AI embedding search.
+    
+    Kết quả được sắp xếp theo độ tương tự từ cao xuống thấp (độ chính xác AI cao nhất).
     
     Có thể tìm kiếm theo:
     - tour_type_id: ID loại tour
-    - destination: Tên địa điểm đích (tìm bằng embedding)
-    - departure: Tên điểm khởi hành (tìm bằng embedding)
+    - destination: Tên địa điểm đích (tìm bằng AI embedding - tìm cả các địa điểm tương tự)
+    - departure: Tên điểm khởi hành (tìm bằng AI embedding - tìm cả các điểm tương tự)
     - target_date: Ngày khởi hành
+    - limit: Số lượng kết quả (mặc định 10)
     - Hoặc kết hợp nhiều điều kiện
     
     Ví dụ:
     - /search-by-fields/?tour_type_id=1
-    - /search-by-fields/?destination=Đà Lạt
+    - /search-by-fields/?destination=Đà Lạt&limit=10
     - /search-by-fields/?departure=Hà Nội
     - /search-by-fields/?target_date=2025-07-15
-    - /search-by-fields/?tour_type_id=1&departure=Hà Nội&destination=Đà Lạt&target_date=2025-07-15
+    - /search-by-fields/?tour_type_id=1&departure=Hà Nội&destination=Đà Lạt&limit=10
     """
     # Kiểm tra ít nhất một điều kiện được cung cấp
     if not any([tour_type_id, destination, departure, target_date]):

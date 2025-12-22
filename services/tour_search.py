@@ -544,26 +544,28 @@ class TourSearchService:
         }
 
     @staticmethod
-    def search_tour_by_fields(tour_type_id: int = None, destination: str = None, departure: str = None, target_date = None, limit: int = 5):
+    def search_tour_by_fields(tour_type_id: int = None, destination: str = None, departure: str = None, target_date = None, limit: int = 10):
         """
-        Tìm kiếm tour với các điều kiện kết hợp:
+        Tìm kiếm tour với các điều kiện kết hợp sử dụng embedding search:
         - tour_type_id: ID loại tour
-        - destination: Tên địa điểm đích (ví dụ: "Đà Lạt", "Singapore") - tìm bằng embedding
-        - departure: Tên điểm khởi hành (ví dụ: "Hà Nội", "TP.HCM") - tìm bằng embedding
+        - destination: Tên địa điểm đích (ví dụ: "Đà Lạt", "Singapore") - tìm bằng embedding similarity
+        - departure: Tên điểm khởi hành (ví dụ: "Hà Nội", "TP.HCM") - tìm bằng embedding similarity
         - target_date: Ngày khởi hành (date object hoặc string "YYYY-MM-DD")
-        - limit: Số lượng tour tối đa trả về (mặc định 5)
+        - limit: Số lượng tour tối đa trả về (mặc định 10)
+        
+        Kết quả được sắp xếp theo độ tương tự từ cao xuống thấp
         
         Returns:
             Dict chứa danh sách tours với đầy đủ thông tin chi tiết
             
         Example:
-            # Tìm tour loại 1, khởi hành từ Hà Nội, đi Đà Lạt, khởi hành ngày 15/7/2025
+            # Tìm 10 tour loại 1, khởi hành từ Hà Nội, đi Đà Lạt, theo độ tương tự cao nhất
             result = TourSearchService.search_tour_by_fields(
                 tour_type_id=1,
                 departure="Hà Nội",
                 destination="Đà Lạt",
                 target_date="2025-07-15",
-                limit=5
+                limit=10
             )
         """
         # Gọi repository để lấy danh sách tour_ids thỏa mãn điều kiện

@@ -282,44 +282,50 @@ class TourRepository:
             return [tid[0] for tid in tour_ids]
 
     @staticmethod
-    def search_tour_by_fields(tour_type_id: int = None, destination: str = None, departure: str = None, target_date = None, limit: int = 5):
+    def search_tour_by_fields(tour_type_id: int = None, destination: str = None, departure: str = None, target_date = None, limit: int = 10):
         """
-        Tìm kiếm tour với các điều kiện:
+        Tìm kiếm tour với các điều kiện sử dụng embedding search (vector similarity):
         - tour_type_id: ID loại tour
-        - destination: Tên địa điểm đích (tìm kiếm bằng embedding trong tour_destinations)
-        - departure: Tên điểm khởi hành (tìm kiếm bằng embedding trong tour_departures)
+        - destination: Tên địa điểm đích (tìm kiếm bằng embedding vector similarity)
+        - departure: Tên điểm khởi hành (tìm kiếm bằng embedding vector similarity)
         - target_date: Ngày khởi hành (tìm trong specific_departures hoặc recurring_schedules)
-        - limit: Giới hạn số lượng kết quả
+        - limit: Giới hạn số lượng kết quả (mặc định 10)
         
         Returns:
-            List các tour_id thỏa mãn điều kiện
+            List các tour_id được sắp xếp theo độ tương tự từ cao xuống thấp
         """
         from datetime import date as date_type
         from repositories.tour_departure import TourDepartureRepository
         from repositories.tour_destination import TourDestinationRepository
         
         # Tìm tour_ids bằng embedding cho departure và destination
-        tour_ids_by_departure = set()
-        tour_ids_by_destination = set()
+        tour_ids_by_departure = []
+        tour_ids_by_destination = []
         
         if departure:
-            dep_candidates = TourDepartureRepository.search_by_text(departure, limit=10) 
-            tour_ids_by_departure = {d.dict()["tour_id"] for d in dep_candidates}
+            # Lấy nhiều kết quả hơn để có thể filter sau
+            dep_candidates = TourDepartureRepository.search_by_text(departure, limit=limit * 2) 
+            tour_ids_by_departure = [(d.dict()["tour_id"], idx) for idx, d in enumerate(dep_candidates)]
         
         if destination:
-            dest_candidates = TourDestinationRepository.search_by_text(destination, limit=10) 
-            tour_ids_by_destination = {d.dict()["tour_id"] for d in dest_candidates}
+            # Lấy nhiều kết quả hơn để có thể filter sau
+            dest_candidates = TourDestinationRepository.search_by_text(destination, limit=limit * 2) 
+            tour_ids_by_destination = [(d.dict()["tour_id"], idx) for idx, d in enumerate(dest_candidates)]
         
-        # Kết hợp tour_ids từ departure và destination
+        # Kết hợp tour_ids từ departure và destination với ranking
+        candidate_tour_ids = None
         if departure and destination:
-            # Phải thỏa mãn cả hai điều kiện
-            candidate_tour_ids = tour_ids_by_departure.intersection(tour_ids_by_destination)
+            # Kết hợp cả hai điều kiện - tính tổng ranking (ranking thấp hơn = tốt hơn)
+            dep_dict = {tid: rank for tid, rank in tour_ids_by_departure}
+            dest_dict = {tid: rank for tid, rank in tour_ids_by_destination}
+            # Chỉ lấy tours có trong cả hai
+            common_tour_ids = set(dep_dict.keys()).intersection(set(dest_dict.keys()))
+            # Sắp xếp theo tổng ranking
+            candidate_tour_ids = sorted(common_tour_ids, key=lambda tid: dep_dict[tid] + dest_dict[tid])
         elif departure:
-            candidate_tour_ids = tour_ids_by_departure
+            candidate_tour_ids = [tid for tid, _ in tour_ids_by_departure]
         elif destination:
-            candidate_tour_ids = tour_ids_by_destination
-        else:
-            candidate_tour_ids = None  # Không có điều kiện departure/destination
+            candidate_tour_ids = [tid for tid, _ in tour_ids_by_destination]
         
         with Session() as session:
             # Bắt đầu với query cơ bản từ bảng tours
@@ -366,8 +372,20 @@ class TourRepository:
                     )
                 )
             
-            # Giới hạn số lượng kết quả
-            tour_ids = query.limit(limit).all()
+            # Lấy tất cả tour_ids sau khi filter
+            filtered_tour_ids = [tid[0] for tid in query.all()]
             
-            return [tid[0] for tid in tour_ids]
+            # Sắp xếp theo thứ tự embedding similarity nếu có candidate_tour_ids
+            if candidate_tour_ids is not None:
+                # Giữ thứ tự từ embedding search
+                result = []
+                for tid in candidate_tour_ids:
+                    if tid in filtered_tour_ids:
+                        result.append(tid)
+                    if len(result) >= limit:
+                        break
+                return result
+            else:
+                # Không có embedding search, trả về theo limit
+                return filtered_tour_ids[:limit]
 

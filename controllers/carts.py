@@ -24,7 +24,7 @@ def create_cart_for_guest():
     
     Tự động tạo session_id ngẫu nhiên và trả về
     """
-    session_id = str(uuid.uuid4())
+    session_id = uuid.uuid4()
     return CartService.create(CartCreateModel(session_id=session_id))
 
 
